@@ -70,7 +70,7 @@ const snackbar = ref({
     type: "info",
 });
 
-const showSnackbar = (msg, type = "info", duration = 3000) => {
+const showSnackbar = (msg, type = "info", duration = 5000) => {
     snackbar.value.message = msg;
     snackbar.value.type = type;
     snackbar.value.visible = true;
@@ -977,15 +977,17 @@ const clearFilters = () => {
             </div>
         </transition>
         <!-- Snackbar -->
-        <transition name="fade">
-            <div
-                v-if="snackbar.visible"
-                class="fixed bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded shadow-lg z-50 text-white"
-                :class="snackbar.type === 'error' ? 'bg-red-600 dark:bg-red-700' : 'bg-gray-900 dark:text-gray-900'"
-            >
-                {{ snackbar.message }}
-            </div>
-        </transition>
+        <Teleport to="body">
+            <transition name="fade">
+                <div
+                    v-if="snackbar.visible"
+                    class="fixed bottom-4 left-1/2 transform -translate-x-1/2 px-5 py-3 rounded-xl shadow-2xl z-[99999] text-white font-medium text-sm pointer-events-auto"
+                    :class="snackbar.type === 'error' ? 'bg-red-600 dark:bg-red-700' : 'bg-gray-900 dark:bg-gray-800'"
+                >
+                    {{ snackbar.message }}
+                </div>
+            </transition>
+        </Teleport>
 
         <!-- Document Image Viewer (zoom / pan / fit-to-viewport) -->
         <ImageViewer

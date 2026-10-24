@@ -388,7 +388,7 @@ let snackbarTimer = null;
 const showSnackbar = (message, type = 'success') => {
   snackbar.value = { show: true, message, type };
   clearTimeout(snackbarTimer);
-  snackbarTimer = setTimeout(() => { snackbar.value.show = false; }, 3500);
+  snackbarTimer = setTimeout(() => { snackbar.value.show = false; }, 5000);
 };
 
 const tagApplication = async () => {
@@ -724,20 +724,22 @@ const untagApplication = async () => {
     />
 
     <!-- Snackbar -->
-    <transition name="snackbar">
-      <div v-if="snackbar.show"
-        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] px-5 py-3 text-white text-sm font-medium rounded-xl shadow-xl flex items-center gap-3"
-        :class="snackbar.type === 'error' ? 'bg-red-600 dark:bg-red-700' : 'bg-gray-900 dark:bg-gray-700'"
-      >
-        <svg v-if="snackbar.type !== 'error'" class="w-4 h-4 text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-        </svg>
-        <svg v-else class="w-4 h-4 text-white shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        {{ snackbar.message }}
-      </div>
-    </transition>
+    <Teleport to="body">
+      <transition name="snackbar">
+        <div v-if="snackbar.show"
+          class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[99999] px-5 py-3 text-white text-sm font-medium rounded-xl shadow-2xl flex items-center gap-3 pointer-events-auto"
+          :class="snackbar.type === 'error' ? 'bg-red-600 dark:bg-red-700' : 'bg-gray-900 dark:bg-gray-700'"
+        >
+          <svg v-if="snackbar.type !== 'error'" class="w-4 h-4 text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <svg v-else class="w-4 h-4 text-white shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {{ snackbar.message }}
+        </div>
+      </transition>
+    </Teleport>
   </AppLayout>
 </template>
 

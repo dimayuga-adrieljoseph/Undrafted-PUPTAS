@@ -558,14 +558,18 @@ const submitPass = async () => {
         evaluationError.value = msg;
         showToast(msg, "error");
         if ([400, 409, 422].includes(error.response?.status)) {
-            await fetchUsers();
-            if (selectedUser.value?.id) {
-                const updatedUser = users.value.find(u => u.id === selectedUser.value.id);
-                if (updatedUser) {
-                    await selectUser(updatedUser);
-                } else {
-                    closeUserCard();
+            try {
+                await fetchUsers();
+                if (selectedUser.value?.id) {
+                    const updatedUser = users.value.find(u => u.id === selectedUser.value.id);
+                    if (updatedUser) {
+                        await selectUser(updatedUser);
+                    } else {
+                        closeUserCard();
+                    }
                 }
+            } catch (refreshErr) {
+                console.error("Refresh failed:", refreshErr);
             }
         }
     } finally {
@@ -589,7 +593,7 @@ const showToast = (message, type = 'success') => {
     toastVisible.value = true;
     toastTimeout = setTimeout(() => {
         toastVisible.value = false;
-    }, 3000);
+    }, 5000);
 };
 
 const totalPages = computed(() => Math.ceil(filteredUsers.value.length / itemsPerPage));
@@ -1221,6 +1225,9 @@ const clearFilters = () => {
                                             {{ isCancellingReview ? 'Cancelling...' : 'Cancel' }}
                                         </button>
                                     </div>
+                                    <div v-if="evaluationError && !isEvaluating" class="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-xs" role="alert">
+                                        {{ evaluationError }}
+                                    </div>
                                     <div class="flex gap-2">
                                         <button v-if="!isEvaluating" @click="showPassModal = true"
                                             class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 shadow-sm">
@@ -1361,31 +1368,33 @@ const clearFilters = () => {
         />
 
         <!-- Success Toast Notification -->
-        <transition enter-active-class="transition ease-out duration-300" enter-from-class="transform opacity-0 translate-y-[-1rem]" enter-to-class="transform opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="transform opacity-100 translate-y-0" leave-to-class="transform opacity-0 translate-y-[-1rem]">
-            <div v-if="toastVisible" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
-                <div :class="['rounded-lg shadow-lg overflow-hidden border', toastType === 'success' ? 'bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-400' : 'bg-red-50 dark:bg-red-900/20 border-red-500 dark:border-red-400']">
-                    <div class="p-4 flex items-start">
-                        <svg v-if="toastType === 'success'" class="w-5 h-5 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <svg v-else class="w-5 h-5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div class="ml-3 w-0 flex-1 pt-0.5">
-                            <p :class="['text-sm font-medium', toastType === 'success' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200']">{{ toastMessage }}</p>
-                        </div>
-                        <div class="ml-4 flex-shrink-0 flex">
-                            <button @click="toastVisible = false" :class="['rounded-md inline-flex focus:outline-none', toastType === 'success' ? 'text-green-500 hover:text-green-600' : 'text-red-500 hover:text-red-600']">
-                                <span class="sr-only">Close</span>
-                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </button>
+        <Teleport to="body">
+            <transition enter-active-class="transition ease-out duration-300" enter-from-class="transform opacity-0 translate-y-[-1rem]" enter-to-class="transform opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="transform opacity-100 translate-y-0" leave-to-class="transform opacity-0 translate-y-[-1rem]">
+                <div v-if="toastVisible" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-[99999] w-full max-w-md px-4 pointer-events-auto">
+                    <div :class="['rounded-lg shadow-2xl overflow-hidden border', toastType === 'success' ? 'bg-green-50 dark:bg-green-900 border-green-500 dark:border-green-400' : 'bg-red-50 dark:bg-red-900 border-red-500 dark:border-red-400']">
+                        <div class="p-4 flex items-start">
+                            <svg v-if="toastType === 'success'" class="w-5 h-5 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <svg v-else class="w-5 h-5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div class="ml-3 w-0 flex-1 pt-0.5">
+                                <p :class="['text-sm font-medium', toastType === 'success' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200']">{{ toastMessage }}</p>
+                            </div>
+                            <div class="ml-4 flex-shrink-0 flex">
+                                <button @click="toastVisible = false" :class="['rounded-md inline-flex focus:outline-none', toastType === 'success' ? 'text-green-500 hover:text-green-600' : 'text-red-500 hover:text-red-600']">
+                                    <span class="sr-only">Close</span>
+                                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </transition>
+            </transition>
+        </Teleport>
     </EvaluatorLayout>
 </template>
 
