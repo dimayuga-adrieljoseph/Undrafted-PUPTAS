@@ -368,7 +368,27 @@ const confirmCancelReview = async () => {
         showToast("Review cancelled.", "info");
         showCancelModal.value = false;
     } catch (error) {
-        showToast(error.response?.data?.message || "Failed to cancel review.", "error");
+        const msg = error.response?.data?.message || "Failed to cancel review.";
+        showToast(msg, "error");
+        if ([400, 409, 422].includes(error.response?.status)) {
+            refreshDashboard();
+            if (selectedUser.value?.id) {
+                try {
+                    const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`);
+                    const userData = refetch.data.user;
+                    selectedUser.value = {
+                        ...selectedUser.value,
+                        ...userData,
+                        application: {
+                            ...userData.application,
+                            processes: userData.application?.processes || [],
+                        },
+                    };
+                } catch (e) {
+                    closeUserCard();
+                }
+            }
+        }
     } finally {
         isCancellingReview.value = false;
     }
@@ -417,7 +437,8 @@ const startReview = async () => {
                     },
                     grades: userData.grades || null,
                 };
-                showToast("Review was already started.");
+                refreshDashboard();
+                showToast(error.response?.data?.message || "Review was already started.", "error");
             } catch (refetchErr) {
                 console.error("Refetch failed:", refetchErr);
             }
@@ -608,8 +629,32 @@ const submitReturn = async () => {
     } catch (error) {
         console.error(error);
         showReturnModal.value = false;
-        const msg = error.response?.data?.message || error.response?.data?.errors?.note?.[0];
-        evaluationError.value = msg || "Action failed. Please try again.";
+        const msg = error.response?.data?.message || error.response?.data?.errors?.note?.[0] || "Action failed. Please try again.";
+        evaluationError.value = msg;
+        showToast(msg, "error");
+        if ([400, 409, 422].includes(error.response?.status)) {
+            refreshDashboard();
+            if (selectedUser.value?.id) {
+                try {
+                    const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`);
+                    const userData = refetch.data.user;
+                    selectedUser.value = {
+                        ...selectedUser.value,
+                        ...userData,
+                        application: {
+                            ...userData.application,
+                            processes: userData.application?.processes || [],
+                            program: userData.application?.program || null,
+                            second_choice: userData.application?.second_choice || null,
+                            third_choice: userData.application?.third_choice || null,
+                        },
+                        grades: userData.grades || null,
+                    };
+                } catch (refetchErr) {
+                    closeUserCard();
+                }
+            }
+        }
     } finally {
         isSubmitting.value = false;
     }
@@ -633,7 +678,32 @@ const submitPass = async () => {
     } catch (error) {
         console.error("Error passing application:", error);
         showPassModal.value = false;
-        evaluationError.value = error.response?.data?.message || "Failed to pass application.";
+        const msg = error.response?.data?.message || "Failed to pass application.";
+        evaluationError.value = msg;
+        showToast(msg, "error");
+        if ([400, 409, 422].includes(error.response?.status)) {
+            refreshDashboard();
+            if (selectedUser.value?.id) {
+                try {
+                    const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`);
+                    const userData = refetch.data.user;
+                    selectedUser.value = {
+                        ...selectedUser.value,
+                        ...userData,
+                        application: {
+                            ...userData.application,
+                            processes: userData.application?.processes || [],
+                            program: userData.application?.program || null,
+                            second_choice: userData.application?.second_choice || null,
+                            third_choice: userData.application?.third_choice || null,
+                        },
+                        grades: userData.grades || null,
+                    };
+                } catch (refetchErr) {
+                    closeUserCard();
+                }
+            }
+        }
     } finally {
         isSubmitting.value = false;
     }
@@ -655,7 +725,7 @@ const showToast = (message, type = 'success') => {
     toastVisible.value = true;
     toastTimeout = setTimeout(() => {
         toastVisible.value = false;
-    }, 3000);
+    }, 5000);
 };
 </script>
 
@@ -663,31 +733,33 @@ const showToast = (message, type = 'success') => {
     <Head :title="currentStage === 'document_evaluator' ? 'Document Evaluator Dashboard' : 'Grade Evaluator Dashboard'" />
     <EvaluatorLayout>
         <!-- Success Toast Notification -->
-        <transition enter-active-class="transition ease-out duration-300" enter-from-class="transform opacity-0 translate-y-[-1rem]" enter-to-class="transform opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="transform opacity-100 translate-y-0" leave-to-class="transform opacity-0 translate-y-[-1rem]">
-            <div v-if="toastVisible" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
-                <div :class="['rounded-lg shadow-lg overflow-hidden border', toastType === 'success' ? 'bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-400' : 'bg-red-50 dark:bg-red-900/20 border-red-500 dark:border-red-400']">
-                    <div class="p-4 flex items-start">
-                        <svg v-if="toastType === 'success'" class="w-5 h-5 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <svg v-else class="w-5 h-5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div class="ml-3 w-0 flex-1 pt-0.5">
-                            <p :class="['text-sm font-medium', toastType === 'success' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200']">{{ toastMessage }}</p>
-                        </div>
-                        <div class="ml-4 flex-shrink-0 flex">
-                            <button @click="toastVisible = false" :class="['rounded-md inline-flex focus:outline-none', toastType === 'success' ? 'text-green-500 hover:text-green-600' : 'text-red-500 hover:text-red-600']">
-                                <span class="sr-only">Close</span>
-                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </button>
+        <Teleport to="body">
+            <transition enter-active-class="transition ease-out duration-300" enter-from-class="transform opacity-0 translate-y-[-1rem]" enter-to-class="transform opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="transform opacity-100 translate-y-0" leave-to-class="transform opacity-0 translate-y-[-1rem]">
+                <div v-if="toastVisible" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-[99999] w-full max-w-md px-4 pointer-events-auto">
+                    <div :class="['rounded-lg shadow-2xl overflow-hidden border', toastType === 'success' ? 'bg-green-50 dark:bg-green-900 border-green-500 dark:border-green-400' : 'bg-red-50 dark:bg-red-900 border-red-500 dark:border-red-400']">
+                        <div class="p-4 flex items-start">
+                            <svg v-if="toastType === 'success'" class="w-5 h-5 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <svg v-else class="w-5 h-5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div class="ml-3 w-0 flex-1 pt-0.5">
+                                <p :class="['text-sm font-medium', toastType === 'success' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200']">{{ toastMessage }}</p>
+                            </div>
+                            <div class="ml-4 flex-shrink-0 flex">
+                                <button @click="toastVisible = false" :class="['rounded-md inline-flex focus:outline-none', toastType === 'success' ? 'text-green-500 hover:text-green-600' : 'text-red-500 hover:text-red-600']">
+                                    <span class="sr-only">Close</span>
+                                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </transition>
+            </transition>
+        </Teleport>
 
         <div class="dash-shell">
         <!-- Header & Stats Section -->
@@ -979,6 +1051,9 @@ const showToast = (message, type = 'success') => {
                             <button @click="cancelReview" :disabled="isCancellingReview" class="text-xs font-semibold hover:underline text-red-600 dark:text-red-400 disabled:opacity-50">
                                 {{ isCancellingReview ? 'Cancelling...' : 'Cancel' }}
                             </button>
+                        </div>
+                        <div v-if="evaluationError && !isEvaluating" class="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm" role="alert">
+                            {{ evaluationError }}
                         </div>
                         <button
                             v-if="!isEvaluating"

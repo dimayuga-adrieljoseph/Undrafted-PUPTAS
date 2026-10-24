@@ -67,10 +67,12 @@ const selectedProgramId = ref("");
 const snackbar = ref({
     visible: false,
     message: "",
+    type: "info",
 });
 
-const showSnackbar = (msg, duration = 3000) => {
+const showSnackbar = (msg, type = "info", duration = 5000) => {
     snackbar.value.message = msg;
+    snackbar.value.type = type;
     snackbar.value.visible = true;
     setTimeout(() => {
         snackbar.value.visible = false;
@@ -437,12 +439,24 @@ const handleReasonConfirm = async (reason) => {
 
             await fetchUsers();
         } catch (e) {
-            console.error("Accept failed:", e);
+            console.error("Tag failed:", e);
             const msg = e.response?.data?.errors?.reason?.[0] ||
                 e.response?.data?.message ||
-                "Failed to accept application due to an unexpected error.";
+                "Failed to tag application due to an unexpected error.";
             reasonErrorMessage.value = msg;
-            showSnackbar(msg);
+            showSnackbar(msg, "error");
+            if ([400, 409, 422].includes(e.response?.status)) {
+                showReasonModal.value = false;
+                await fetchUsers();
+                if (selectedUser.value?.id) {
+                    const updatedUser = users.value.find(u => u.id === selectedUser.value.id);
+                    if (updatedUser) {
+                        await selectUser(updatedUser);
+                    } else {
+                        selectedUser.value = null;
+                    }
+                }
+            }
         } finally {
             isReasonSubmitting.value = false;
         }
@@ -454,12 +468,24 @@ const handleReasonConfirm = async (reason) => {
             selectedUser.value = null;
             await fetchUsers();
         } catch (e) {
-            console.error("Revert failed:", e);
+            console.error("Untag failed:", e);
             const msg = e.response?.data?.errors?.reason?.[0] ||
                 e.response?.data?.message ||
-                "Failed to revert application due to an unexpected error.";
+                "Failed to untag application due to an unexpected error.";
             reasonErrorMessage.value = msg;
-            showSnackbar(msg);
+            showSnackbar(msg, "error");
+            if ([400, 409, 422].includes(e.response?.status)) {
+                showReasonModal.value = false;
+                await fetchUsers();
+                if (selectedUser.value?.id) {
+                    const updatedUser = users.value.find(u => u.id === selectedUser.value.id);
+                    if (updatedUser) {
+                        await selectUser(updatedUser);
+                    } else {
+                        selectedUser.value = null;
+                    }
+                }
+            }
         } finally {
             isReasonSubmitting.value = false;
         }
@@ -483,9 +509,20 @@ const transferApplication = async () => {
 
         // ✅ Fix: use `e` not `error`
         if (e.response?.data?.message) {
-            showSnackbar(e.response.data.message); // ✅ show server message
+            showSnackbar(e.response.data.message, "error"); // ✅ show server message
         } else {
-            showSnackbar("Transfer failed due to an unexpected error.");
+            showSnackbar("Transfer failed due to an unexpected error.", "error");
+        }
+        if ([400, 409, 422].includes(e.response?.status)) {
+            await fetchUsers();
+            if (selectedUser.value?.id) {
+                const updatedUser = users.value.find(u => u.id === selectedUser.value.id);
+                if (updatedUser) {
+                    await selectUser(updatedUser);
+                } else {
+                    selectedUser.value = null;
+                }
+            }
         }
     }
 };
@@ -940,14 +977,17 @@ const clearFilters = () => {
             </div>
         </transition>
         <!-- Snackbar -->
-        <transition name="fade">
-            <div
-                v-if="snackbar.visible"
-                class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded shadow-lg z-50 dark:text-gray-900"
-            >
-                {{ snackbar.message }}
-            </div>
-        </transition>
+        <Teleport to="body">
+            <transition name="fade">
+                <div
+                    v-if="snackbar.visible"
+                    class="fixed bottom-4 left-1/2 transform -translate-x-1/2 px-5 py-3 rounded-xl shadow-2xl z-[99999] text-white font-medium text-sm pointer-events-auto"
+                    :class="snackbar.type === 'error' ? 'bg-red-600 dark:bg-red-700' : 'bg-gray-900 dark:bg-gray-800'"
+                >
+                    {{ snackbar.message }}
+                </div>
+            </transition>
+        </Teleport>
 
         <!-- Document Image Viewer (zoom / pan / fit-to-viewport) -->
         <ImageViewer
