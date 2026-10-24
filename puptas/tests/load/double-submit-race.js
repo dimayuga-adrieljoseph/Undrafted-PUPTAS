@@ -45,7 +45,10 @@ export const options = {
 export default function () {
     const vuId = __VU;
     const email = `testapplicant${vuId}@gmail.com`;
-    const password = __ENV.TEST_USER_PASSWORD || 'password';
+    const password = __ENV.TEST_USER_PASSWORD;
+    if (!password) {
+        throw new Error('TEST_USER_PASSWORD environment variable is required. Default password fallback has been removed for security.');
+    }
 
     // 1. Authenticate the VU using assigned seeded account
     const authResult = authenticateUser(email, password);
