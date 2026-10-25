@@ -65,11 +65,13 @@ const snackbar = ref({
 const autoRefreshTimer = ref(null);
 const POLL_INTERVAL_MS = 10000;
 
+let snackbarTimer = null;
 const showSnackbar = (msg, type = "info", duration = 5000) => {
+    clearTimeout(snackbarTimer);
     snackbar.value.message = msg;
     snackbar.value.type = type;
     snackbar.value.visible = true;
-    setTimeout(() => {
+    snackbarTimer = setTimeout(() => {
         snackbar.value.visible = false;
     }, duration);
 };
@@ -346,8 +348,8 @@ const handleReasonConfirm = async (reason) => {
             await fetchStats();
         } catch (e) {
             console.error("Tag failed:", e);
-            const msg = e.response?.data?.errors?.reason?.[0] ||
-                e.response?.data?.message ||
+            const msg = e.response?.data?.message ||
+                e.response?.data?.errors?.reason?.[0] ||
                 "Failed to tag application";
             reasonErrorMessage.value = msg;
             showSnackbar(msg, "error");
@@ -356,12 +358,7 @@ const handleReasonConfirm = async (reason) => {
                 await fetchUsers();
                 await fetchStats();
                 if (selectedUser.value?.id) {
-                    try {
-                        const res = await axios.get(`${props.baseUrl}/application/${selectedUser.value.id}`);
-                        selectedUser.value = { ...selectedUser.value, ...res.data.user };
-                    } catch (err) {
-                        selectedUser.value = null;
-                    }
+                    await selectUser({ id: selectedUser.value.id, ...selectedUser.value });
                 }
             }
         } finally {
@@ -377,8 +374,8 @@ const handleReasonConfirm = async (reason) => {
             await fetchStats();
         } catch (e) {
             console.error("Untag failed:", e);
-            const msg = e.response?.data?.errors?.reason?.[0] ||
-                e.response?.data?.message ||
+            const msg = e.response?.data?.message ||
+                e.response?.data?.errors?.reason?.[0] ||
                 "Failed to untag application";
             reasonErrorMessage.value = msg;
             showSnackbar(msg, "error");
@@ -387,12 +384,7 @@ const handleReasonConfirm = async (reason) => {
                 await fetchUsers();
                 await fetchStats();
                 if (selectedUser.value?.id) {
-                    try {
-                        const res = await axios.get(`${props.baseUrl}/application/${selectedUser.value.id}`);
-                        selectedUser.value = { ...selectedUser.value, ...res.data.user };
-                    } catch (err) {
-                        selectedUser.value = null;
-                    }
+                    await selectUser({ id: selectedUser.value.id, ...selectedUser.value });
                 }
             }
         } finally {
@@ -743,6 +735,7 @@ const handleReasonConfirm = async (reason) => {
                             Tag: Enrolled
                         </button>
                         <button
+                            v-if="selectedUser?.application?.enrollment_status === 'officially_enrolled'"
                             @click="openUntagModal"
                             class="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center gap-2 text-sm min-h-[44px]"
                         >

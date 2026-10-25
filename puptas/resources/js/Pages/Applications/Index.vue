@@ -55,6 +55,7 @@ const availablePrograms = ref([]);
 const changeCourseSelectedId = ref("");
 const isChangingCourse = ref(false);
 const courseChangeMessage = ref("");
+const courseChangeIsError = ref(false);
 
 // Snackbar Notification
 const snackbar = ref({ visible: false, message: "", type: "info" });
@@ -340,17 +341,15 @@ const changeCourse = async () => {
             `/record-dashboard/change-course/${selectedUser.value.id}`,
             { program_id: changeCourseSelectedId.value }
         );
+        courseChangeIsError.value = false;
         courseChangeMessage.value = res.data?.message ?? "Course updated successfully.";
         changeCourseSelectedId.value = "";
 
         // Refresh user details
         await fetchUsers();
         await fetchPrograms(); // Update slot counters
-        const refreshedUser = users.value.find((u) => u.id === selectedUser.value.id);
-        if (refreshedUser) {
-            await selectUser(refreshedUser);
-        } else {
-            selectedUser.value = null;
+        if (selectedUser.value?.id) {
+            await selectUser({ id: selectedUser.value.id, ...selectedUser.value });
         }
     } catch (e) {
         console.error("Course change failed:", e);
@@ -358,16 +357,14 @@ const changeCourse = async () => {
             e.response?.data?.message ??
             e.response?.data?.errors?.program_id?.[0] ??
             "Failed to change course.";
+        courseChangeIsError.value = true;
         courseChangeMessage.value = msg;
         showSnackbar(msg, "error");
         if ([400, 409, 422].includes(e.response?.status)) {
             await fetchUsers();
             await fetchPrograms();
-            const refreshedUser = users.value.find((u) => u.id === selectedUser.value.id);
-            if (refreshedUser) {
-                await selectUser(refreshedUser);
-            } else {
-                selectedUser.value = null;
+            if (selectedUser.value?.id) {
+                await selectUser({ id: selectedUser.value.id, ...selectedUser.value });
             }
         }
     } finally {
@@ -678,6 +675,7 @@ const clearFilters = () => {
             :available-programs="availablePrograms"
             :is-changing-course="isChangingCourse"
             :course-change-message="courseChangeMessage"
+            :course-change-is-error="courseChangeIsError"
             :change-course-selected-id="changeCourseSelectedId"
             @close="closeUserCard"
             @open-image="openImageModal"

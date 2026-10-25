@@ -70,11 +70,13 @@ const snackbar = ref({
     type: "info",
 });
 
+let snackbarTimer = null;
 const showSnackbar = (msg, type = "info", duration = 5000) => {
+    clearTimeout(snackbarTimer);
     snackbar.value.message = msg;
     snackbar.value.type = type;
     snackbar.value.visible = true;
-    setTimeout(() => {
+    snackbarTimer = setTimeout(() => {
         snackbar.value.visible = false;
     }, duration);
 };
@@ -440,8 +442,8 @@ const handleReasonConfirm = async (reason) => {
             await fetchUsers();
         } catch (e) {
             console.error("Tag failed:", e);
-            const msg = e.response?.data?.errors?.reason?.[0] ||
-                e.response?.data?.message ||
+            const msg = e.response?.data?.message ||
+                e.response?.data?.errors?.reason?.[0] ||
                 "Failed to tag application due to an unexpected error.";
             reasonErrorMessage.value = msg;
             showSnackbar(msg, "error");
@@ -449,12 +451,7 @@ const handleReasonConfirm = async (reason) => {
                 showReasonModal.value = false;
                 await fetchUsers();
                 if (selectedUser.value?.id) {
-                    const updatedUser = users.value.find(u => u.id === selectedUser.value.id);
-                    if (updatedUser) {
-                        await selectUser(updatedUser);
-                    } else {
-                        selectedUser.value = null;
-                    }
+                    await selectUser({ id: selectedUser.value.id, ...selectedUser.value });
                 }
             }
         } finally {
@@ -469,8 +466,8 @@ const handleReasonConfirm = async (reason) => {
             await fetchUsers();
         } catch (e) {
             console.error("Untag failed:", e);
-            const msg = e.response?.data?.errors?.reason?.[0] ||
-                e.response?.data?.message ||
+            const msg = e.response?.data?.message ||
+                e.response?.data?.errors?.reason?.[0] ||
                 "Failed to untag application due to an unexpected error.";
             reasonErrorMessage.value = msg;
             showSnackbar(msg, "error");
@@ -478,12 +475,7 @@ const handleReasonConfirm = async (reason) => {
                 showReasonModal.value = false;
                 await fetchUsers();
                 if (selectedUser.value?.id) {
-                    const updatedUser = users.value.find(u => u.id === selectedUser.value.id);
-                    if (updatedUser) {
-                        await selectUser(updatedUser);
-                    } else {
-                        selectedUser.value = null;
-                    }
+                    await selectUser({ id: selectedUser.value.id, ...selectedUser.value });
                 }
             }
         } finally {
@@ -507,21 +499,14 @@ const transferApplication = async () => {
     } catch (e) {
         console.error("Transfer failed", e);
 
-        // ✅ Fix: use `e` not `error`
-        if (e.response?.data?.message) {
-            showSnackbar(e.response.data.message, "error"); // ✅ show server message
-        } else {
-            showSnackbar("Transfer failed due to an unexpected error.", "error");
-        }
+        const msg = e.response?.data?.message ||
+            e.response?.data?.errors?.program_id?.[0] ||
+            "Transfer failed due to an unexpected error.";
+        showSnackbar(msg, "error");
         if ([400, 409, 422].includes(e.response?.status)) {
             await fetchUsers();
             if (selectedUser.value?.id) {
-                const updatedUser = users.value.find(u => u.id === selectedUser.value.id);
-                if (updatedUser) {
-                    await selectUser(updatedUser);
-                } else {
-                    selectedUser.value = null;
-                }
+                await selectUser({ id: selectedUser.value.id, ...selectedUser.value });
             }
         }
     }
@@ -941,6 +926,7 @@ const clearFilters = () => {
                                             Tag: Enrolled
                                         </button>
                                         <button
+                                            v-if="selectedUser?.application?.enrollment_status === 'officially_enrolled'"
                                             @click="openUntagModal"
                                             class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition flex items-center justify-center gap-2">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
