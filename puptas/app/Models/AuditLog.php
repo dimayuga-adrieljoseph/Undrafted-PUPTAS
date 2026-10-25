@@ -30,6 +30,7 @@ class AuditLog extends Model
     const CATEGORY_ADMISSION_DATA   = 'ADMISSION_DATA';
     const CATEGORY_AUDIT_ACCESS     = 'AUDIT_ACCESS';
     const CATEGORY_SYSTEM_OPERATION = 'SYSTEM_OPERATION';
+    const CATEGORY_SYSTEM_CHANGE    = 'SYSTEM_CHANGE';
 
     protected $fillable = [
         'user_id',

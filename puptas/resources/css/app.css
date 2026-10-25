@@ -29,6 +29,90 @@ input[type='number'] {
     appearance: textfield;
 }
 
+/* ── PUPTAS Dashboard Design System ──────────────────────────────────────────
+   CSS custom properties consumed by dashboard components.
+   Light-mode defaults; dark-mode overrides via .dark selector.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+    /* Brand */
+    --puptas-maroon:         #800000;
+    --puptas-maroon-light:   #9E122C;
+    --puptas-maroon-subtle:  #FFF5F5;
+    --puptas-gold:           #FFD700;
+    --puptas-gold-warm:      #D4A017;
+
+    /* Dashboard surfaces */
+    --dash-bg:               #F5F4F2;
+    --dash-surface:          #FFFFFF;
+    --dash-surface-soft:     #FAFAF9;
+    --dash-surface-muted:    #F3F2F1;
+
+    /* Text */
+    --dash-text:             #1C1917;
+    --dash-text-muted:       #6B7280;
+    --dash-text-subtle:      #9CA3AF;
+
+    /* Borders */
+    --dash-border:           #E7E5E4;
+    --dash-border-muted:     #F0EFEE;
+
+    /* Semantic status */
+    --status-success:        #15803D;
+    --status-success-bg:     #F0FDF4;
+    --status-success-border: #BBF7D0;
+    --status-warning:        #B45309;
+    --status-warning-bg:     #FFFBEB;
+    --status-warning-border: #FDE68A;
+    --status-danger:         #B91C1C;
+    --status-danger-bg:      #FEF2F2;
+    --status-danger-border:  #FECACA;
+    --status-info:           #1D4ED8;
+    --status-info-bg:        #EFF6FF;
+    --status-info-border:    #BFDBFE;
+    --status-neutral:        #4B5563;
+    --status-neutral-bg:     #F9FAFB;
+    --status-neutral-border: #E5E7EB;
+
+    /* Pipeline stage accents */
+    --stage-document:  #D97706; /* amber */
+    --stage-grade:     #7C3AED; /* violet */
+    --stage-interview: #0369A1; /* sky */
+    --stage-medical:   #0F766E; /* teal */
+    --stage-records:   #6D28D9; /* purple */
+    --stage-enrolled:  #15803D; /* green */
+
+    /* Chart palette */
+    --chart-primary:    #800000;
+    --chart-secondary:  #D4A017;
+    --chart-tertiary:   #1D4ED8;
+    --chart-success:    #15803D;
+    --chart-warning:    #D97706;
+    --chart-danger:     #DC2626;
+}
+
+.dark {
+    --dash-bg:               #0f172a;   /* slate-950 — page background */
+    --dash-surface:          #111827;   /* gray-900  — matches dark:bg-gray-900 used on all cards */
+    --dash-surface-soft:     #1f2937;   /* gray-800  */
+    --dash-surface-muted:    #374151;   /* gray-700  */
+    --dash-text:             #F5F5F4;
+    --dash-text-muted:       #A8A29E;
+    --dash-text-subtle:      #78716C;
+    --dash-border:           #1f2937;   /* gray-800 — matches dark:border-gray-800 on all cards */
+    --dash-border-muted:     #111827;   /* gray-900 */
+    --status-success-bg:     #052e16;
+    --status-success-border: #166534;
+    --status-warning-bg:     #1c1100;
+    --status-warning-border: #92400e;
+    --status-danger-bg:      #1c0505;
+    --status-danger-border:  #991b1b;
+    --status-info-bg:        #030d28;
+    --status-info-border:    #1e3a8a;
+    --status-neutral-bg:     #111827;
+    --status-neutral-border: #374151;
+}
+
+/* ── Dashboard shell ─────────────────────────────────────────────────────── */
 /* Non-scrollable dashboard shell (used by all role dashboards except applicant) */
 .dash-shell {
     display: flex;
@@ -39,5 +123,64 @@ input[type='number'] {
     .dash-shell {
         height: calc(100vh - 14rem);
         overflow: hidden;
+    }
+}
+
+/* ── New scrollable dashboard shell ─────────────────────────────────────── */
+/* Used by redesigned dashboards that use natural vertical scroll */
+.dash-shell-scroll {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* ── Dashboard metric card ───────────────────────────────────────────────── */
+.metric-card {
+    background: var(--dash-surface);
+    border: 1px solid var(--dash-border);
+    border-radius: 0.875rem;
+    padding: 1.25rem 1.5rem;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.metric-card:hover {
+    box-shadow: 0 4px 12px 0 rgb(0 0 0 / 0.08);
+    border-color: #D1CEC9;
+}
+
+.dark .metric-card {
+    background: var(--dash-surface);
+    border-color: var(--dash-border);
+}
+
+/* ── Pipeline stage badge ────────────────────────────────────────────────── */
+.stage-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+/* ── Section heading ─────────────────────────────────────────────────────── */
+.dash-section-title {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dash-text-muted);
+}
+
+/* ── Reduced-motion overrides ────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
     }
 }

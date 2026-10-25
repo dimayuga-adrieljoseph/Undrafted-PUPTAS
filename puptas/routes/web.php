@@ -776,6 +776,16 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::delete('/admin/score-overrides/email', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'destroyEmail'])->name('score-overrides.destroy-email');
     Route::get('/admin/score-overrides/probation-applicants', [\App\Http\Controllers\SuperAdmin\ScoreOverrideController::class, 'getProbationApplicants'])->name('score-overrides.probation-applicants');
 
+    // IDP Sync Monitor (System Settings)
+    Route::get('/admin/system-settings/idp-sync-monitor', [\App\Http\Controllers\SuperAdmin\IdpSyncMonitorController::class, 'index'])->name('idp-sync-monitor.index');
+    Route::get('/api/super-admin/idp-sync-monitor/metrics', [\App\Http\Controllers\SuperAdmin\IdpSyncMonitorController::class, 'getMetrics'])->name('idp-sync-monitor.metrics');
+    
+    // Rate-limited expensive operations (5 requests per minute)
+    Route::middleware('throttle:5,1')->group(function () {
+        Route::post('/api/super-admin/idp-sync-monitor/trigger-sync', [\App\Http\Controllers\SuperAdmin\IdpSyncMonitorController::class, 'triggerSync'])->name('idp-sync-monitor.trigger-sync');
+        Route::post('/api/super-admin/idp-sync-monitor/retry-failed-jobs', [\App\Http\Controllers\SuperAdmin\IdpSyncMonitorController::class, 'retryFailedJobs'])->name('idp-sync-monitor.retry-failed');
+    });
+
     // Global System Settings (Deprecated in favor of CutoffSettings)
     // Removed SystemSettingsController routes
 

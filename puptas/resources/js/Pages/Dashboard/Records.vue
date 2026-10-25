@@ -1,717 +1,544 @@
+<!--
+  Dashboard/Records.vue — PUPTAS Registrar / Record Staff Dashboard
+  ──────────────────────────────────────────────────────────────────
+  Serves Registrar (role 6) and Admin/SuperAdmin visiting the records route.
+  baseUrl prop switches between /record-dashboard and /admin/records.
+
+  All existing workflow interactions are preserved:
+  - fetchUsers   async (GET  baseUrl/applicants)
+  - fetchStats   async (GET  baseUrl/stats)
+  - tag          (POST baseUrl/tag/{id})   → officially_enrolled
+  - untag        (POST baseUrl/untag/{id}) → revert to temporary
+  - return files (POST /record-dashboard/return-files/{user})
+  - Auto-refresh every 10 s
+
+  Visual style follows the completed Admin / SuperAdmin dashboard redesign.
+  Stage accent: purple (#6D28D9) for records / enrollment
+-->
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
-import { Head, Link } from "@inertiajs/vue3";
-import RecordStaffLayout from "@/Layouts/RecordStaffLayout.vue";
-import BlurText from "@/Components/BlurText.vue";
-import ImageViewer from "@/Components/ImageViewer.vue";
-import EnrollmentReasonModal from "@/Components/EnrollmentReasonModal.vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { Head } from '@inertiajs/vue3'
+import RecordStaffLayout from '@/Layouts/RecordStaffLayout.vue'
+import ImageViewer from '@/Components/ImageViewer.vue'
+import EnrollmentReasonModal from '@/Components/EnrollmentReasonModal.vue'
+import UserDetailsModal from '@/Pages/Applications/UserDetailsModal.vue'
+import { useMaskingState } from '@/Composables/useMaskingState'
 
-import UserDetailsModal from "@/Pages/Applications/UserDetailsModal.vue";
-import { useMaskingState } from "@/Composables/useMaskingState";
-
-import { usePage } from "@inertiajs/vue3";
-
-const page = usePage();
-const users = ref(page.props.users || []);
-const programs = ref(page.props.programs || []);
-const summary = ref(
-    page.props.summary || { total: 0, accepted: 0, pending: 0, returned: 0 }
-);
-const { isUnmasked } = useMaskingState();
-
+// ── Props ─────────────────────────────────────────────────────────────────────
 const props = defineProps({
-    user: Object,
-    allUsers: Array,
-    // Admin/superadmin pass '/admin/records'; registrar gets the default
-    baseUrl: {
-        type: String,
-        default: '/record-dashboard',
-    },
-});
+    user:    { type: Object, default: null },
+    // programs passed from RecordStaffDashboardController@index via DashboardService
+    programs: { type: Array,  default: () => [] },
+    summary:  { type: Object, default: () => ({ in_progress: 0, processed: 0 }) },
+    // Admin uses /admin/records, Registrar uses /record-dashboard
+    baseUrl: { type: String, default: '/record-dashboard' },
+})
 
-// Summary items with icons and percentages
-// Summary items — 2 cards: in-queue for records + officially enrolled
-const summaryItems = computed(() => [
-    {
-        label: "In Queue",
-        value: summary.value?.in_progress ?? 0,
-        icon: {
-            template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>',
-        },
-        percentage: null,
-        color: "blue",
-    },
-    {
-        label: "Enrolled",
-        value: summary.value?.processed ?? 0,
-        icon: {
-            template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
-        },
-        percentage: null,
-        color: "green",
-    },
-]);
+const { isUnmasked } = useMaskingState()
 
-const selectedUser = ref(null);
-const isLoading = ref(true);
-const errorMessage = ref("");
-const searchQuery = ref("");
-const selectedUserFiles = ref({});
-const snackbar = ref({
-    visible: false,
-    message: "",
-    type: "info",
-});
-const autoRefreshTimer = ref(null);
-const POLL_INTERVAL_MS = 10000;
+const isAdminOrSuperAdmin = computed(() => [2, 7].includes(props.user?.role_id))
 
-let snackbarTimer = null;
-const showSnackbar = (msg, type = "info", duration = 5000) => {
-    clearTimeout(snackbarTimer);
-    snackbar.value.message = msg;
-    snackbar.value.type = type;
-    snackbar.value.visible = true;
-    snackbarTimer = setTimeout(() => {
-        snackbar.value.visible = false;
-    }, duration);
-};
-
-const getStatusClass = (status) => {
-    const s = (status || "").toLowerCase();
-    if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-    if (s === "cleared_for_enrollment" || s === "officially_enrolled") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
-    if (s === "returned")
-        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
-    return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
-};
+// ── Async data (users + stats) ────────────────────────────────────────────────
+const users    = ref([])
+const programs = ref(props.programs || [])
+const summary  = ref(props.summary  || { in_progress: 0, processed: 0 })
+const isLoading = ref(true)
+const loadError = ref('')
 
 const fetchUsers = async () => {
     try {
-        const sep = props.baseUrl.includes('?') ? '&' : '?';
-        const unmaskParam = isUnmasked.value ? `${sep}unmask=1` : '';
-        const response = await fetch(`${props.baseUrl}/applicants${unmaskParam}`, {
-            headers: {
-                Accept: "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-            },
-        });
-        if (!response.ok) throw new Error("Failed to fetch users");
-        users.value = await response.json();
-    } catch (error) {
-        errorMessage.value = error.message;
+        const sep    = props.baseUrl.includes('?') ? '&' : '?'
+        const unmask = isUnmasked.value ? `${sep}unmask=1` : ''
+        const res = await fetch(`${props.baseUrl}/applicants${unmask}`, {
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        })
+        if (!res.ok) throw new Error('Failed to fetch applicants')
+        users.value = await res.json()
+    } catch (e) {
+        loadError.value = e.message
     } finally {
-        isLoading.value = false;
+        isLoading.value = false
     }
-};
+}
 
 const fetchStats = async () => {
     try {
-        const response = await axios.get(`${props.baseUrl}/stats`);
-        summary.value = response.data.summary || { total: 0, accepted: 0, pending: 0, returned: 0 };
-        programs.value = response.data.programs || [];
-    } catch (error) {
-        console.error("Failed to fetch stats:", error);
+        const res = await axios.get(`${props.baseUrl}/stats`)
+        summary.value  = res.data.summary  || { in_progress: 0, processed: 0 }
+        programs.value = res.data.programs || []
+    } catch (e) {
+        console.error('Failed to fetch stats:', e)
     }
-};
+}
 
-const recentListContainer = ref(null);
-const dynamicPageSize = ref(2);
-
-const updateDynamicPageSize = () => {
-    if (!recentListContainer.value) return;
-    const availableHeight = recentListContainer.value.clientHeight;
-    // Each applicant card is ~115px (including padding, text, borders) with gap-3 (12px) = ~127px per item
-    const calculated = Math.floor((availableHeight + 12) / 127);
-    dynamicPageSize.value = Math.max(2, calculated);
-};
-
-let resizeObserver = null;
-onMounted(() => {
-    fetchUsers();
-    fetchStats();
-    if (recentListContainer.value && typeof ResizeObserver !== "undefined") {
-        resizeObserver = new ResizeObserver(() => {
-            updateDynamicPageSize();
-        });
-        resizeObserver.observe(recentListContainer.value);
-    }
-    updateDynamicPageSize();
-
-    autoRefreshTimer.value = setInterval(async () => {
-        await fetchUsers();
-        await fetchStats();
-
-        if (!selectedUser.value) {
-            return;
+// Auto-refresh every 10 s
+let autoRefreshTimer = null
+onMounted(async () => {
+    await Promise.all([fetchUsers(), fetchStats()])
+    autoRefreshTimer = setInterval(async () => {
+        await Promise.all([fetchUsers(), fetchStats()])
+        if (selectedUser.value) {
+            const exists = users.value.some(u => String(u.id) === String(selectedUser.value.id))
+            if (!exists) closeUserCard()
         }
+    }, 10000)
+})
+onBeforeUnmount(() => { if (autoRefreshTimer) clearInterval(autoRefreshTimer) })
 
-        const existsInQueue = users.value.some((u) => String(u.id) === String(selectedUser.value.id));
-        if (!existsInQueue) {
-            closeUserCard();
-        }
-    }, POLL_INTERVAL_MS);
-});
+// ── Applicant queue ───────────────────────────────────────────────────────────
+const searchQuery = ref('')
+const currentPage = ref(1)
+const PAGE_SIZE   = 8
 
-onBeforeUnmount(() => {
-    if (resizeObserver) {
-        resizeObserver.disconnect();
-        resizeObserver = null;
-    }
-    if (autoRefreshTimer.value) {
-        clearInterval(autoRefreshTimer.value);
-        autoRefreshTimer.value = null;
-    }
-});
+// Records queue: show applicants cleared_for_enrollment or officially_enrolled
+const queuedUsers = computed(() =>
+    users.value.filter(u =>
+        u.pipeline_status === 'for_records' ||
+        u.pipeline_status === 'officially_enrolled' ||
+        u.enrollment_status === 'officially_enrolled'
+    )
+)
 
 const filteredUsers = computed(() => {
-    if (!searchQuery.value.trim()) return users.value;
-    const query = searchQuery.value.toLowerCase();
-    return users.value.filter((user) => {
-        return (
-            user.firstname?.toLowerCase().includes(query) ||
-            user.lastname?.toLowerCase().includes(query) ||
-            user.email?.toLowerCase().includes(query)
-        );
-    });
-});
-
-const currentPage = ref(1);
-
-const totalRecordPages = computed(() => {
-    const visible = users.value.filter(
-        u => u.pipeline_status === 'for_records' || u.pipeline_status === 'officially_enrolled' ||
-             u.enrollment_status === 'officially_enrolled'
-    );
-    const filtered = searchQuery.value.trim()
-        ? visible.filter(u => {
-            const q = searchQuery.value.toLowerCase();
-            return u.firstname?.toLowerCase().includes(q) ||
-                   u.lastname?.toLowerCase().includes(q) ||
-                   u.email?.toLowerCase().includes(q);
-          })
-        : visible;
-    return Math.max(1, Math.ceil(filtered.length / dynamicPageSize.value));
-});
-
+    const q = searchQuery.value.trim().toLowerCase()
+    if (!q) return queuedUsers.value
+    return queuedUsers.value.filter(u =>
+        `${u.firstname} ${u.lastname}`.toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q)
+    )
+})
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredUsers.value.length / PAGE_SIZE)))
 const displayedUsers = computed(() => {
-    // Show only in-progress (for_records) and officially enrolled records
-    const visible = users.value.filter(
-        u => u.pipeline_status === 'for_records' || u.pipeline_status === 'officially_enrolled' ||
-             u.enrollment_status === 'officially_enrolled'
-    );
-    if (searchQuery.value.trim()) {
-        const q = searchQuery.value.toLowerCase();
-        const filtered = visible.filter(u =>
-            u.firstname?.toLowerCase().includes(q) ||
-            u.lastname?.toLowerCase().includes(q) ||
-            u.email?.toLowerCase().includes(q)
-        );
-        const start = (currentPage.value - 1) * dynamicPageSize.value;
-        return filtered.slice(start, start + dynamicPageSize.value);
-    }
-    const start = (currentPage.value - 1) * dynamicPageSize.value;
-    return visible.slice(start, start + dynamicPageSize.value);
-});
+    const s = (currentPage.value - 1) * PAGE_SIZE
+    return filteredUsers.value.slice(s, s + PAGE_SIZE)
+})
+watch(searchQuery, () => { currentPage.value = 1 })
 
-watch([searchQuery, dynamicPageSize], () => {
-    if (currentPage.value > totalRecordPages.value) {
-        currentPage.value = Math.max(1, totalRecordPages.value);
-    }
-});
-
-watch(searchQuery, () => { currentPage.value = 1; });
+// ── User selection & file fetch ───────────────────────────────────────────────
+const selectedUser      = ref(null)
+const selectedUserFiles = ref({})
 
 const selectUser = async (user) => {
     try {
-        const response = await axios.get(
-            `${props.baseUrl}/application/${user.id}`
-        );
-
+        const res = await axios.get(`${props.baseUrl}/application/${user.id}`)
         selectedUser.value = {
             ...user,
             application: {
-                ...response.data.user.application,
-                processes: response.data.user.application?.processes || [],
-                program: response.data.user.application?.program || null,
+                ...res.data.user.application,
+                processes: res.data.user.application?.processes || [],
+                program:   res.data.user.application?.program   || null,
             },
-        };
-
-        selectedUserFiles.value = response.data.uploadedFiles || {};
-    } catch (error) {
-        console.error("Failed to fetch user data:", error);
-        selectedUserFiles.value = {};
-        selectedUser.value = null;
-        showSnackbar("Failed to load applicant data");
+        }
+        selectedUserFiles.value = res.data.uploadedFiles || {}
+    } catch (e) {
+        console.error('Failed to load applicant:', e)
+        showSnackbar('Failed to load applicant data.')
     }
-};
+}
 
-const closeUserCard = () => {
-    selectedUser.value = null;
-};
+const closeUserCard = () => { selectedUser.value = null; selectedUserFiles.value = {} }
 
-const formatFileKey = (key) => {
-    const map = {
-        file10Front: 'Grade 10 Report Front',
-        file10: 'Grade 10 Report Back',
-        file11Front: "Grade 11 Report Front",
-        file11: "Grade 11 Report Back",
-        file12Front: "Grade 12 Report Front",
-        file12: "Grade 12 Report Back",
-        schoolId: "School ID",
-        nonEnrollCert: "Non-Enrollment Cert",
-        psa: "PSA Birth Certificate",
-        goodMoral: "Good Moral Certificate",
-        underOath: "Under Oath Document",
-        photo2x2: "2x2 Photo",
-    };
-    return map[key] || key;
-};
+// ── Image viewer ──────────────────────────────────────────────────────────────
+const previewImage    = ref('')
+const previewAlt      = ref('Document preview')
+const showImageModal  = ref(false)
+const getFileUrl      = (f) => typeof f === 'string' ? f : (f?.url || '')
+const hasImagePreview = (f) => Boolean(getFileUrl(f)) && (typeof f === 'string' || f?.isImage !== false)
+const openImageModal  = (file, label = '') => {
+    const src = getFileUrl(file)
+    if (!src || !hasImagePreview(file)) return
+    previewImage.value   = src
+    previewAlt.value     = label || file?.original_name || 'Document preview'
+    showImageModal.value = true
+}
+const closeImageModal = () => { showImageModal.value = false; previewImage.value = '' }
 
-const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
+// ── Snackbar ──────────────────────────────────────────────────────────────────
+const snackbar   = ref({ visible: false, message: '', type: 'info' })
+let   snackTimer = null
+const showSnackbar = (msg, type = 'info', duration = 5000) => {
+    if (snackTimer) clearTimeout(snackTimer)
+    snackbar.value = { visible: true, message: msg, type }
+    snackTimer = setTimeout(() => { snackbar.value.visible = false }, duration)
+}
 
-const hasImagePreview = (file) =>
-    Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
-
-const previewImage = ref(null);
-const previewAlt = ref("Document preview");
-const showImageModal = ref(false);
-
-const openImageModal = (file, label = "") => {
-    const src = getFileUrl(file);
-    if (!src || !hasImagePreview(file)) {
-        return;
-    }
-
-    previewImage.value = src;
-    previewAlt.value = label || file?.original_name || "Document preview";
-    showImageModal.value = true;
-};
-
-const closeImageModal = () => {
-    showImageModal.value = false;
-    previewImage.value = null;
-    previewAlt.value = "Document preview";
-};
-
-const capitalize = (str) =>
-    typeof str === "string"
-        ? str.charAt(0).toUpperCase() + str.slice(1).replace("_", " ")
-        : "";
-
-const formatDate = (date) => {
-    if (!date) return "—";
-    return new Date(date).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-};
-
-// Reason Modal for Tag / Untag
-const showReasonModal = ref(false);
-const reasonModalAction = ref('tag');
-const isReasonSubmitting = ref(false);
-const reasonErrorMessage = ref('');
+// ── Enrollment Reason Modal Actions (Separation of Duties) ────────────────────
+const showReasonModal    = ref(false)
+const reasonModalAction  = ref('tag')
+const isReasonSubmitting = ref(false)
+const reasonErrorMessage = ref('')
 
 const openTagModal = () => {
-    reasonModalAction.value = 'tag';
-    reasonErrorMessage.value = '';
-    showReasonModal.value = true;
-};
+    reasonModalAction.value = 'tag'
+    reasonErrorMessage.value = ''
+    showReasonModal.value = true
+}
 
 const openUntagModal = () => {
-    reasonModalAction.value = 'untag';
-    reasonErrorMessage.value = '';
-    showReasonModal.value = true;
-};
+    reasonModalAction.value = 'untag'
+    reasonErrorMessage.value = ''
+    showReasonModal.value = true
+}
 
 const handleReasonConfirm = async (reason) => {
-    if (!selectedUser.value?.id) return;
-    isReasonSubmitting.value = true;
-    reasonErrorMessage.value = '';
+    if (!selectedUser.value?.id) return
+    isReasonSubmitting.value = true
+    reasonErrorMessage.value = ''
 
     if (reasonModalAction.value === 'tag') {
         try {
-            const taggedId = selectedUser.value.id;
-            await axios.post(`${props.baseUrl}/tag/${taggedId}`, { reason });
-            showSnackbar("Tagged as Enrolled");
-            showReasonModal.value = false;
+            const taggedId = selectedUser.value.id
+            await axios.post(`${props.baseUrl}/tag/${taggedId}`, { reason })
+            showSnackbar('Tagged as Enrolled', 'success')
+            showReasonModal.value = false
 
-            // Immediately remove from the list so UI updates without waiting for refetch
-            users.value = users.value.filter(u => u.id !== taggedId);
-            selectedUser.value = null;
+            users.value = users.value.filter(u => u.id !== taggedId)
+            selectedUser.value = null
 
-            await fetchUsers();
-            await fetchStats();
+            await fetchUsers()
+            await fetchStats()
         } catch (e) {
-            console.error("Tag failed:", e);
+            console.error('Tag failed:', e)
             const msg = e.response?.data?.message ||
                 e.response?.data?.errors?.reason?.[0] ||
-                "Failed to tag application";
-            reasonErrorMessage.value = msg;
-            showSnackbar(msg, "error");
+                'Failed to tag application'
+            reasonErrorMessage.value = msg
+            showSnackbar(msg, 'error')
             if ([400, 409, 422].includes(e.response?.status)) {
-                showReasonModal.value = false;
-                await fetchUsers();
-                await fetchStats();
+                showReasonModal.value = false
+                await fetchUsers()
+                await fetchStats()
                 if (selectedUser.value?.id) {
-                    await selectUser({ id: selectedUser.value.id, ...selectedUser.value });
+                    await selectUser({ id: selectedUser.value.id, ...selectedUser.value })
                 }
             }
         } finally {
-            isReasonSubmitting.value = false;
+            isReasonSubmitting.value = false
         }
     } else {
         try {
-            await axios.post(`${props.baseUrl}/untag/${selectedUser.value.id}`, { reason });
-            showSnackbar("Reverted to temporary enrolled");
-            showReasonModal.value = false;
-            selectedUser.value = null;
-            await fetchUsers();
-            await fetchStats();
+            await axios.post(`${props.baseUrl}/untag/${selectedUser.value.id}`, { reason })
+            showSnackbar('Reverted to temporary enrolled', 'success')
+            showReasonModal.value = false
+            selectedUser.value = null
+            await fetchUsers()
+            await fetchStats()
         } catch (e) {
-            console.error("Untag failed:", e);
+            console.error('Untag failed:', e)
             const msg = e.response?.data?.message ||
                 e.response?.data?.errors?.reason?.[0] ||
-                "Failed to untag application";
-            reasonErrorMessage.value = msg;
-            showSnackbar(msg, "error");
+                'Failed to untag application'
+            reasonErrorMessage.value = msg
+            showSnackbar(msg, 'error')
             if ([400, 409, 422].includes(e.response?.status)) {
-                showReasonModal.value = false;
-                await fetchUsers();
-                await fetchStats();
+                showReasonModal.value = false
+                await fetchUsers()
+                await fetchStats()
                 if (selectedUser.value?.id) {
-                    await selectUser({ id: selectedUser.value.id, ...selectedUser.value });
+                    await selectUser({ id: selectedUser.value.id, ...selectedUser.value })
                 }
             }
         } finally {
-            isReasonSubmitting.value = false;
+            isReasonSubmitting.value = false
         }
     }
-};
+}
+
+// ── Status helpers ────────────────────────────────────────────────────────────
+const statusBadgeClass = (s) => {
+    const v = (s || '').toLowerCase()
+    if (['accepted', 'cleared_for_enrollment', 'officially_enrolled'].includes(v))
+        return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300'
+    if (v === 'submitted')
+        return 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
+    if (v === 'returned')
+        return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
+    return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+}
+const enrollmentBadgeClass = (enrollStatus) =>
+    enrollStatus === 'officially_enrolled'
+        ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300'
+        : 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300'
+
+const formatDate = (d) => {
+    if (!d) return '—'
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+// Total application count across programs
+const totalApplicationsCount = computed(() =>
+    programs.value.reduce((sum, p) => sum + (p.applications_count || 0), 0)
+)
 </script>
 
 <template>
-    <Head title="Record Staff Dashboard" />
+    <Head title="Registrar Dashboard" />
     <RecordStaffLayout>
-        <div class="dash-shell">
-        <!-- Header & Stats Section -->
-        <div class="px-4 md:px-8 mb-6 shrink-0 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-6">
-            <!-- Header Left -->
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-1">
-                <div>
-                    <BlurText
-                        text="Records Dashboard"
-                        :delay="100"
-                        animate-by="words"
-                        direction="top"
-                        class-name="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white"
-                    />
-                    <BlurText
-                        text="Manage enrollment records and program applications."
-                        :delay="60"
-                        animate-by="words"
-                        direction="top"
-                        :step-duration="0.3"
-                        class-name="text-gray-600 dark:text-gray-400 mt-2"
-                    />
-                </div>
-                <div class="relative w-full sm:w-64 shrink-0">
-                    <input
-                        v-model="searchQuery"
-                        type="text"
-                        placeholder="Search applicants..."
-                        class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                    />
-                    <svg
-                        class="w-5 h-5 text-gray-400 absolute left-3 top-2.5 dark:text-gray-200"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                        />
+
+        <!-- ── Snackbar ──────────────────────────────────────────────── -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transition duration-200 ease-out"
+                enter-from-class="translate-y-3 opacity-0"
+                enter-to-class="translate-y-0 opacity-100"
+                leave-active-class="transition duration-150 ease-in"
+                leave-from-class="translate-y-0 opacity-100"
+                leave-to-class="translate-y-3 opacity-0"
+            >
+                <div
+                    v-if="snackbar.visible"
+                    role="status"
+                    aria-live="polite"
+                    class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[99999] px-5 py-3 rounded-xl shadow-2xl text-white text-sm font-medium flex items-center gap-3 pointer-events-auto"
+                    :class="snackbar.type === 'error' ? 'bg-red-600 dark:bg-red-700' : 'bg-gray-900 dark:bg-gray-800'"
+                >
+                    <svg v-if="snackbar.type !== 'error'" class="w-4 h-4 text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
+                    <svg v-else class="w-4 h-4 text-white shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {{ snackbar.message }}
+                </div>
+            </Transition>
+        </Teleport>
+
+        <div class="dash-shell-scroll space-y-6 pb-8">
+
+            <!-- ── Page header ──────────────────────────────────────────── -->
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2.5 mb-1">
+                        <span class="w-3 h-3 rounded-full bg-purple-600" aria-hidden="true"></span>
+                        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Registrar Dashboard</h1>
+                    </div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        Process enrollment for medically cleared applicants and manage program registrations.
+                    </p>
+                </div>
+                <a
+                    :href="baseUrl === '/admin/records' ? '/admin/records/applications' : '/recordstaff-applications'"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-maroon-light text-white hover:bg-maroon transition shadow-sm self-start sm:self-auto"
+                >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    All Applications
+                </a>
+            </div>
+
+            <!-- ── Summary metric cards ───────────────────────────────── -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="metric-card border-l-4 border-l-purple-600 animate-slide-up">
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Awaiting Enrollment</p>
+                    <p class="mt-1 text-2xl font-bold tabular-nums text-purple-700 dark:text-purple-400">
+                        {{ (summary?.in_progress ?? 0).toLocaleString() }}
+                    </p>
+                    <p class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">Cleared, pending registration</p>
+                </div>
+                <div class="metric-card border-l-4 border-l-green-600 animate-slide-up">
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Enrolled</p>
+                    <p class="mt-1 text-2xl font-bold tabular-nums text-green-700 dark:text-green-400">
+                        {{ (summary?.processed ?? 0).toLocaleString() }}
+                    </p>
+                    <p class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">Officially enrolled</p>
                 </div>
             </div>
 
-            <!-- Stats Grid -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 shrink-0 xl:min-w-[420px]">
-                <div
-                    v-for="(item, index) in summaryItems"
-                    :key="index"
-                    class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 flex items-center justify-between gap-4"
-                >
-                    <div>
-                        <p class="text-gray-600 dark:text-gray-400 text-xs font-medium mb-1">{{ item.label }}</p>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white leading-none">{{ item.value.toLocaleString() }}</p>
-                    </div>
-                    <div :class="[
-                        'p-2.5 rounded-lg shrink-0',
-                        item.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300' :
-                        item.color === 'green' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300' :
-                        item.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-300' :
-                        'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300'
-                    ]">
-                        <component :is="item.icon" class="w-5 h-5" />
-                    </div>
-                </div>
-            </div>
-        </div>
+            <!-- ── Main grid: queue + programs ──────────────────────── -->
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
 
-        <!-- Main Content Grid -->
-        <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-6 px-4 md:px-8">
-            <!-- Left Column: Programs Overview -->
-            <div class="lg:col-span-2 flex flex-col min-h-0">
-                <div
-                    class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 h-full flex flex-col min-h-0"
-                >
-                    <div class="mb-4 shrink-0">
-                        <h3
-                            class="text-xl font-semibold text-gray-900 dark:text-white mb-1"
-                        >
-                            Programs Overview
-                        </h3>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm">
-                            Application counts by program
-                        </p>
-                    </div>
-
-                    <div
-                        class="flex-1 min-h-0 overflow-y-auto pr-1"
-                    >
-                        <div
-                            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"
-                        >
-                            <div
-                                v-for="program in programs"
-                                :key="program.id"
-                                class="group"
-                            >
-                                <div
-                                    class="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-900/30 rounded-xl p-3.5 text-center border-2 border-pink-200 dark:border-pink-800 transition-all duration-300 hover:shadow-sm"
-                                >
-                                    <div
-                                        class="w-10 h-10 mx-auto mb-2 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-bold text-base dark:bg-gray-900 dark:text-white"
-                                    >
-                                        {{ program.code ? program.code.charAt(0) : '?' }}
-                                    </div>
-                                    <p
-                                        class="font-semibold text-gray-900 dark:text-white text-xs mb-1 truncate"
-                                        :title="program.code || 'N/A'"
-                                    >
-                                        {{ program.code || 'N/A' }}
-                                    </p>
-                                    <p class="text-xl font-bold text-[#9E122C] dark:text-white">
-                                        {{ program.applications_count || 0 }}
-                                    </p>
-                                    <p
-                                        class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5"
-                                    >
-                                        applications
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Program Statistics -->
-                    <div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 grid grid-cols-2 gap-4 shrink-0">
-                        <div
-                            class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
-                        >
-                            <p
-                                class="text-xs text-gray-500 dark:text-gray-400 mb-1"
-                            >
-                                Total Programs
-                            </p>
-                            <p
-                                class="text-xl font-bold text-gray-900 dark:text-white"
-                            >
-                                {{ programs.length }}
-                            </p>
-                        </div>
-                        <div
-                            class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
-                        >
-                            <p
-                                class="text-xs text-gray-500 dark:text-gray-400 mb-1"
-                            >
-                                Total Applications
-                            </p>
-                            <p
-                                class="text-xl font-bold text-gray-900 dark:text-white"
-                            >
-                                {{ summary?.total || 0 }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Column: Recent Applications -->
-            <div class="h-full min-h-0">
-                <div
-                    class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 h-full flex flex-col"
-                >
-                    <div class="flex justify-between items-center mb-6">
+                <!-- Enrollment queue (2/3) -->
+                <div class="xl:col-span-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-card shadow-card flex flex-col">
+                    <div class="px-5 pt-5 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
                         <div>
-                            <h3
-                                class="text-xl font-semibold text-gray-900 dark:text-white mb-1"
-                            >
-                                Recent Applications
-                            </h3>
-                            <p class="text-gray-600 dark:text-gray-400 text-sm">
-                                Latest applicant records
+                            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Enrollment Queue</h2>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                <span v-if="isLoading">Loading…</span>
+                                <span v-else>{{ filteredUsers.length }} applicant{{ filteredUsers.length !== 1 ? 's' : '' }} — click to process enrollment</span>
                             </p>
                         </div>
-                        <Link
-                            href="/recordstaff-applications"
-                            class="text-sm text-[#9E122C] hover:text-[#b51834] font-medium transition dark:text-white dark:hover:text-white"
-                        >
-                            View All
-                        </Link>
+                        <div class="relative sm:w-56 shrink-0">
+                            <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            <input
+                                v-model="searchQuery"
+                                type="search"
+                                placeholder="Search applicant…"
+                                class="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-maroon-light focus:border-maroon-light transition"
+                                aria-label="Search applicants"
+                            />
+                        </div>
                     </div>
 
-                    <div ref="recentListContainer" class="space-y-3 flex-1 overflow-y-auto min-h-0">
-                        <div
-                            v-for="applicant in displayedUsers"
-                            :key="applicant.id"
-                            @click="selectUser(applicant)"
-                            class="p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition cursor-pointer"
-                        >
-                            <div class="flex items-center justify-between mb-3 gap-2">
-                                <div class="flex items-center space-x-3 min-w-0">
-                                    <div
-                                        class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold dark:bg-gray-900 dark:text-gray-900 shrink-0"
-                                    >
-                                        {{ applicant.firstname?.[0] || ""
-                                        }}{{ applicant.lastname?.[0] || "" }}
-                                    </div>
-                                    <div class="min-w-0">
-                                        <h4
-                                            class="font-semibold text-gray-900 dark:text-white truncate"
-                                        >
-                                            {{ applicant.firstname }}
-                                            {{ applicant.lastname }}
-                                        </h4>
-                                        <p
-                                            class="text-gray-600 dark:text-gray-400 text-sm truncate"
-                                        >
-                                            {{ applicant.email }}
-                                        </p>
-                                    </div>
-                                </div>
-                                <span
-                                    :class="getStatusClass(applicant.status)"
-                                    class="px-3 py-1 rounded-full text-xs font-semibold shrink-0"
+                    <!-- Loading skeleton -->
+                    <div v-if="isLoading" class="px-5 py-8 space-y-3">
+                        <div v-for="n in 4" :key="n" class="h-12 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse"></div>
+                    </div>
+
+                    <!-- Error state -->
+                    <div v-else-if="loadError" class="px-5 py-8 text-center">
+                        <p class="text-sm text-red-600 dark:text-red-400">{{ loadError }}</p>
+                        <button @click="fetchUsers" class="mt-3 text-xs text-maroon-light underline hover:no-underline">Try again</button>
+                    </div>
+
+                    <!-- Table -->
+                    <div v-else class="flex-1 overflow-x-auto">
+                        <table class="w-full text-sm" aria-label="Enrollment queue">
+                            <thead>
+                                <tr class="border-b border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/30">
+                                    <th class="text-left px-5 py-2.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Applicant</th>
+                                    <th class="text-left px-3 py-2.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide hidden sm:table-cell">Program</th>
+                                    <th class="text-left px-3 py-2.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide hidden md:table-cell">Date</th>
+                                    <th class="text-left px-3 py-2.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Enrollment</th>
+                                    <th class="px-5 py-2.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                <template v-if="displayedUsers.length === 0">
+                                    <tr>
+                                        <td colspan="5" class="px-5 py-12 text-center">
+                                            <svg class="w-10 h-10 mx-auto text-gray-300 dark:text-gray-700 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            <p class="text-sm text-gray-400 dark:text-gray-500">
+                                                {{ searchQuery ? 'No results found' : 'No applicants awaiting enrollment' }}
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </template>
+                                <tr
+                                    v-for="u in displayedUsers"
+                                    :key="u.id"
+                                    @click="selectUser(u)"
+                                    class="hover:bg-gray-50/70 dark:hover:bg-gray-800/50 cursor-pointer transition"
                                 >
-                                    {{ applicant.status || "Pending" }}
-                                </span>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <p class="text-gray-500 dark:text-gray-400">
-                                        Program
-                                    </p>
-                                    <p
-                                        class="text-gray-900 dark:text-white font-medium"
-                                    >
-                                        {{
-                                            applicant.application?.program
-                                                ?.code || "—"
-                                        }}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p class="text-gray-500 dark:text-gray-400">
-                                        Applied
-                                    </p>
-                                    <p
-                                        class="text-gray-900 dark:text-white font-medium"
-                                    >
-                                        {{
-                                            formatDate(
-                                                applicant.application
-                                                    ?.created_at
-                                            )
-                                        }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Empty state -->
-                        <div
-                            v-if="displayedUsers.length === 0"
-                            class="text-center py-8"
-                        >
-                            <svg
-                                class="w-12 h-12 text-gray-400 mx-auto mb-3 dark:text-gray-200"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                />
-                            </svg>
-                            <p class="text-gray-500 dark:text-gray-400">
-                                No recent applications
-                            </p>
-                        </div>
+                                    <td class="px-5 py-3">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-7 h-7 rounded-full bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 flex items-center justify-center text-[11px] font-semibold shrink-0" aria-hidden="true">
+                                                {{ (u.firstname || '?').charAt(0) }}{{ (u.lastname || '').charAt(0) }}
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p class="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">
+                                                    {{ u.firstname }} {{ u.lastname }}
+                                                    <span v-if="u.is_masked" class="ml-1 px-1 py-0.5 rounded text-[9px] font-mono bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">MASKED</span>
+                                                </p>
+                                                <p class="text-[10px] text-gray-400 dark:text-gray-500 truncate">{{ u.email }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-3 py-3 hidden sm:table-cell">
+                                        <span class="text-xs text-gray-600 dark:text-gray-400 font-medium">{{ u.program?.code || u.application?.program?.code || '—' }}</span>
+                                    </td>
+                                    <td class="px-3 py-3 hidden md:table-cell">
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ formatDate(u.application?.created_at || u.created_at) }}</span>
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <span class="stage-badge" :class="enrollmentBadgeClass(u.enrollment_status)">
+                                            {{ u.enrollment_status === 'officially_enrolled' ? 'Enrolled' : 'Pending' }}
+                                        </span>
+                                    </td>
+                                    <td class="px-5 py-3 text-right">
+                                        <button
+                                            @click.stop="selectUser(u)"
+                                            class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg text-purple-700 border border-purple-300/50 bg-purple-50/60 hover:bg-purple-50 dark:text-purple-300 dark:border-purple-700/40 dark:bg-purple-900/10 dark:hover:bg-purple-900/20 transition"
+                                            :aria-label="`Process enrollment for ${u.firstname} ${u.lastname}`"
+                                        >
+                                            Process
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
 
                     <!-- Pagination -->
-                    <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <p class="text-xs text-gray-500 dark:text-gray-400">
-                            Page {{ currentPage }} of {{ totalRecordPages }}
-                        </p>
-                        <div class="flex items-center gap-2">
-                            <button
-                                @click="currentPage--"
-                                :disabled="currentPage === 1"
-                                class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                                aria-label="Previous page"
-                            >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                                </svg>
+                    <div v-if="!isLoading && !loadError" class="px-5 py-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between shrink-0">
+                        <p class="text-[11px] text-gray-400 dark:text-gray-500">Page {{ currentPage }} / {{ totalPages }}</p>
+                        <div class="flex items-center gap-1.5">
+                            <button @click="currentPage--" :disabled="currentPage === 1" class="w-6 h-6 flex items-center justify-center rounded border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition" aria-label="Previous page">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                             </button>
-                            <button
-                                @click="currentPage++"
-                                :disabled="currentPage === totalRecordPages"
-                                class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                                aria-label="Next page"
-                            >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
+                            <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-6 h-6 flex items-center justify-center rounded border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition" aria-label="Next page">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                             </button>
                         </div>
                     </div>
                 </div>
+
+                <!-- Programs overview (1/3) -->
+                <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-card shadow-card p-5 flex flex-col">
+                    <div class="mb-4 flex items-start justify-between">
+                        <div>
+                            <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Programs Overview</h2>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Applications per program</p>
+                        </div>
+                        <a
+                            :href="baseUrl === '/admin/records' ? '/admin/records/programs-page' : '/record-programs'"
+                            class="text-xs font-medium text-maroon-light hover:text-maroon dark:text-maroon-200 transition"
+                        >View all →</a>
+                    </div>
+
+                    <!-- Program list -->
+                    <div class="flex-1 overflow-y-auto space-y-2 min-h-0">
+                        <div v-if="programs.length === 0" class="text-xs text-gray-400 dark:text-gray-500 py-8 text-center">No program data available</div>
+                        <div
+                            v-for="p in programs"
+                            :key="p.id"
+                            class="flex items-center gap-3 py-2 border-b border-gray-100 dark:border-gray-800 last:border-0"
+                        >
+                            <!-- Code badge -->
+                            <div class="w-9 h-9 rounded-lg bg-maroon-50 text-maroon-light dark:bg-maroon-900/20 dark:text-maroon-200 flex items-center justify-center text-[10px] font-bold shrink-0">
+                                {{ p.code?.charAt(0) || '?' }}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{{ p.code }}</p>
+                                <p class="text-[10px] text-gray-400 dark:text-gray-500 truncate">{{ p.name }}</p>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <p class="text-sm font-bold tabular-nums text-maroon-light dark:text-maroon-200">{{ p.enrolled_count ?? p.applications_count ?? 0 }}</p>
+                                <p class="text-[9px] text-gray-400 dark:text-gray-500">{{ p.enrolled_count != null ? 'enrolled' : 'applied' }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Totals -->
+                    <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 grid grid-cols-2 gap-3">
+                        <div class="p-2.5 bg-gray-50 dark:bg-gray-800/40 rounded-lg">
+                            <p class="text-[10px] text-gray-500 dark:text-gray-400">Programs</p>
+                            <p class="text-lg font-bold tabular-nums text-gray-900 dark:text-white">{{ programs.length }}</p>
+                        </div>
+                        <div class="p-2.5 bg-gray-50 dark:bg-gray-800/40 rounded-lg">
+                            <p class="text-[10px] text-gray-500 dark:text-gray-400">Enrolled</p>
+                            <p class="text-lg font-bold tabular-nums text-green-700 dark:text-green-400">{{ summary?.processed ?? 0 }}</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        </div>
+            <!-- ── Quick actions ─────────────────────────────────────── -->
+            <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-card shadow-card p-5">
+                <h2 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <a
+                        v-for="action in [
+                            { label: 'All Applications', href: baseUrl === '/admin/records' ? '/admin/records/applications' : '/recordstaff-applications', desc: 'Full application list' },
+                            { label: 'Programs',         href: baseUrl === '/admin/records' ? '/admin/records/programs-page' : '/record-programs',           desc: 'Program slot overview' },
+                            ...(isAdminOrSuperAdmin ? [{ label: 'Admin Dashboard', href: '/dashboard', desc: 'Back to admin overview' }] : []),
+                        ]"
+                        :key="action.href"
+                        :href="action.href"
+                        class="group flex flex-col gap-2 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/40 hover:border-maroon-100 hover:bg-maroon-50/40 dark:hover:border-maroon-800/40 dark:hover:bg-maroon-900/10 transition"
+                    >
+                        <p class="text-[11px] font-semibold text-gray-700 dark:text-gray-300 group-hover:text-maroon-light dark:group-hover:text-maroon-200 transition">{{ action.label }}</p>
+                        <p class="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">{{ action.desc }}</p>
+                    </a>
+                </div>
+            </div>
 
-        <!-- Applicant Detail Modal -->
+        </div><!-- /dash-shell-scroll -->
+
+        <!-- ── UserDetailsModal ──────────────────────────────────────── -->
         <UserDetailsModal
             :selected-user="selectedUser"
             :selected-user-files="selectedUserFiles"
-            :current-user="null"
+            :current-user="user"
             :available-programs="[]"
             :is-changing-course="false"
             :course-change-message="''"
@@ -720,44 +547,44 @@ const handleReasonConfirm = async (reason) => {
             @open-image="openImageModal"
         >
             <template #top-actions>
-                <!-- Enrollment Actions -->
-                <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Enrollment Status</h4>
-                    <div class="space-y-3">
-                        <button
-                            v-if="selectedUser?.application?.enrollment_status !== 'officially_enrolled'"
-                            @click="openTagModal"
-                            class="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium flex items-center justify-center gap-2 text-sm min-h-[44px]"
-                        >
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                            Tag: Enrolled
-                        </button>
-                        <button
-                            v-if="selectedUser?.application?.enrollment_status === 'officially_enrolled'"
-                            @click="openUntagModal"
-                            class="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center gap-2 text-sm min-h-[44px]"
-                        >
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Untag / Revert
-                        </button>
+                <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl space-y-3">
+                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Enrollment Actions</h4>
+
+                    <!-- Current enrollment status -->
+                    <div class="flex items-center justify-between px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <span class="text-xs text-gray-600 dark:text-gray-400">Status</span>
+                        <span class="stage-badge" :class="enrollmentBadgeClass(selectedUser?.application?.enrollment_status)">
+                            {{ selectedUser?.application?.enrollment_status === 'officially_enrolled' ? 'Officially Enrolled' : 'Pending' }}
+                        </span>
                     </div>
+
+                    <!-- Tag as enrolled -->
+                    <button
+                        v-if="selectedUser?.application?.enrollment_status !== 'officially_enrolled'"
+                        @click="openTagModal"
+                        class="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-xs min-h-[40px] flex items-center justify-center gap-2"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        Tag as Officially Enrolled
+                    </button>
+
+                    <!-- Untag / revert -->
+                    <button
+                        v-if="selectedUser?.application?.enrollment_status === 'officially_enrolled'"
+                        @click="openUntagModal"
+                        class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition font-medium text-xs min-h-[40px] flex items-center justify-center gap-2"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                        Untag / Revert to Temporary
+                    </button>
                 </div>
             </template>
         </UserDetailsModal>
 
-        <!-- Document Image Viewer (zoom / pan / fit-to-viewport) -->
-        <ImageViewer
-            :show="showImageModal"
-            :src="previewImage"
-            :alt="previewAlt"
-            @close="closeImageModal"
-        />
+        <!-- ── ImageViewer ───────────────────────────────────────────── -->
+        <ImageViewer :show="showImageModal" :src="previewImage" :alt="previewAlt" @close="closeImageModal"/>
 
-        <!-- Reason Modal for Tag / Untag Enrollment -->
+            <!-- ── EnrollmentReasonModal ─────────────────────────────────── -->
         <EnrollmentReasonModal
             :show="showReasonModal"
             :action-type="reasonModalAction"
@@ -768,29 +595,5 @@ const handleReasonConfirm = async (reason) => {
             @confirm="handleReasonConfirm"
         />
 
-        <!-- Snackbar Notification -->
-        <Teleport to="body">
-            <transition name="fade">
-                <div
-                    v-if="snackbar.visible"
-                    class="fixed bottom-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl shadow-2xl z-[99999] text-white font-medium text-sm pointer-events-auto"
-                    :class="snackbar.type === 'error' ? 'bg-red-600 dark:bg-red-700' : 'bg-gray-900 dark:bg-gray-800'"
-                >
-                    {{ snackbar.message }}
-                </div>
-            </transition>
-        </Teleport>
     </RecordStaffLayout>
 </template>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-    opacity: 0;
-}
-</style>

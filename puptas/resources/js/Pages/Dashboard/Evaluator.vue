@@ -1,740 +1,440 @@
+<!--
+  Dashboard/Evaluator.vue — PUPTAS Document & Grade Evaluator Dashboard
+  ───────────────────────────────────────────────────────────────────────
+  Serves both Document Evaluator (role 3, stage=document_evaluator)
+  and Grade Evaluator (role 8, stage=grade_evaluator) via EvaluatorLayout.
+
+  All existing workflow interactions are preserved:
+  - startReview / cancelReview  (POST /evaluator/start-review/{id}, cancel-review/{id})
+  - passApplication              (POST /evaluator/pass-application/{id})
+  - rejectApplication            (POST /evaluator/reject-application/{id})
+  - flagApplication              (POST /evaluator/flag-application/{id})
+  - returnApplication            (POST /dashboard/return-files/{user})
+  - Auto-refresh every 10 s      (Inertia router.reload)
+
+  Visual style follows the completed Admin / SuperAdmin dashboard redesign:
+  - dash-shell-scroll, metric-card, stage-badge, rounded-card, shadow-card
+  - Stage accent: amber for document_evaluator, violet for grade_evaluator
+-->
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
-import { LineChart } from "vue-chart-3";
-import { Head, Link, router } from "@inertiajs/vue3";
-import EvaluatorLayout from "@/Layouts/EvaluatorLayout.vue";
-import ChangesConfirmationModal from "@/Components/ChangesConfirmationModal.vue";
-import BlurText from "@/Components/BlurText.vue";
-import ImageViewer from "@/Components/ImageViewer.vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { Head, Link, router } from '@inertiajs/vue3'
+import { LineChart } from 'vue-chart-3'
+import {
+    Chart as ChartJS, LineController, LineElement,
+    CategoryScale, LinearScale, PointElement, Tooltip, Legend, Filler,
+} from 'chart.js'
+import EvaluatorLayout from '@/Layouts/EvaluatorLayout.vue'
+import ChangesConfirmationModal from '@/Components/ChangesConfirmationModal.vue'
+import ImageViewer from '@/Components/ImageViewer.vue'
+import UserDetailsModal from '@/Pages/Applications/UserDetailsModal.vue'
+import { useMaskingState } from '@/Composables/useMaskingState'
 
-import UserDetailsModal from "@/Pages/Applications/UserDetailsModal.vue";
-import { 
-    Chart as ChartJS, 
-    LineController, 
-    LineElement, 
-    CategoryScale, 
-    LinearScale, 
-    PointElement, 
-    Tooltip, 
-    Legend, 
-    Filler 
-} from "chart.js";
+ChartJS.register(LineController, LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend, Filler)
 
-ChartJS.register(
-    LineController, 
-    LineElement, 
-    CategoryScale, 
-    LinearScale, 
-    PointElement, 
-    Tooltip, 
-    Legend, 
-    Filler
-);
-
+// ── Props ─────────────────────────────────────────────────────────────────────
 const props = defineProps({
-    user: Object,
-    pendingUsers: Array,
-    summary: {
-        type: Object,
-        default: () => ({
-            in_progress: 0,
-            processed: 0,
-        }),
-    },
-    chartData: {
-        type: Object,
-        default: () => ({ submitted: [], accepted: [], returned: [], labels: [] }),
-    },
-    filters: {
-        type: Object,
-        default: () => ({ start_date: '', end_date: '' })
-    },
-    stage: {
-        type: String,
-        default: ''
-    }
-});
+    user:         { type: Object, default: null },
+    pendingUsers: { type: Array,  default: () => [] },
+    summary:      { type: Object, default: () => ({ in_progress: 0, processed: 0 }) },
+    chartData:    { type: Object, default: () => ({ submitted: [], accepted: [], returned: [], labels: [] }) },
+    filters:      { type: Object, default: () => ({ start_date: '', end_date: '' }) },
+    stage:        { type: String, default: '' },
+})
 
-const startDateFilter = ref(props.filters?.start_date || '');
-const endDateFilter = ref(props.filters?.end_date || '');
-const showDateFilter = ref(false);
+const { isUnmasked } = useMaskingState()
 
+// ── Stage identity ────────────────────────────────────────────────────────────
+const currentStage = computed(() =>
+    props.stage || (props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator')
+)
+const isDocEval  = computed(() => currentStage.value === 'document_evaluator')
+const stageLabel = computed(() => isDocEval.value ? 'Document Evaluation' : 'Grade Evaluation')
+const stageHex   = computed(() => isDocEval.value ? '#D97706' : '#7C3AED')
+const isAdminOrSuperAdmin = computed(() => [2, 7].includes(props.user?.role_id))
+const viewAllLink = computed(() => currentStage.value === 'document_evaluator' ? '/document-evaluator-applications' : `/evaluator-applications?stage=${currentStage.value}`)
+
+// ── Auto-refresh (10 s) ───────────────────────────────────────────────────────
+let autoRefreshTimer = null
+const refreshDashboard = () => {
+    router.reload({ only: ['pendingUsers', 'summary', 'chartData'], preserveState: true, preserveScroll: true })
+}
+onMounted(() => { autoRefreshTimer = setInterval(refreshDashboard, 10000) })
+onBeforeUnmount(() => { if (autoRefreshTimer) clearInterval(autoRefreshTimer) })
+
+// ── Date filter ───────────────────────────────────────────────────────────────
+const startDateFilter = ref(props.filters?.start_date || '')
+const endDateFilter   = ref(props.filters?.end_date   || '')
+const showDateFilter  = ref(false)
 const applyFilters = () => {
     router.get(window.location.pathname, {
         start_date: startDateFilter.value,
-        end_date: endDateFilter.value
-    }, {
-        preserveState: true,
-        preserveScroll: true,
-        replace: true
-    });
-};
+        end_date:   endDateFilter.value,
+    }, { preserveState: true, preserveScroll: true, replace: true })
+    showDateFilter.value = false
+}
 
-// State
-const selectedUser = ref(null);
-const selectedUserFiles = ref({});
-const searchQuery = ref("");
-const previewImage = ref(null);
-const previewAlt = ref("Document preview");
-const showImageModal = ref(false);
-const isEvaluating = ref(false);
-const filesToReturn = ref({});
-const returnNote = ref("");
-const requiresPromissoryNote = ref(false);
-const autoRefreshTimer = ref(null);
-const POLL_INTERVAL_MS = 10000;
+// ── Applicant queue ───────────────────────────────────────────────────────────
+const searchQuery  = ref('')
+const currentPage  = ref(1)
+const PAGE_SIZE    = 8
 
-const currentStage = computed(() => props.stage || (props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator'));
+const filteredApplicants = computed(() => {
+    const q = searchQuery.value.trim().toLowerCase()
+    const list = props.pendingUsers || []
+    if (!q) return list
+    return list.filter(a =>
+        `${a.firstname} ${a.lastname}`.toLowerCase().includes(q) ||
+        (a.email || '').toLowerCase().includes(q)
+    )
+})
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredApplicants.value.length / PAGE_SIZE)))
+const displayedApplicants = computed(() => {
+    const s = (currentPage.value - 1) * PAGE_SIZE
+    return filteredApplicants.value.slice(s, s + PAGE_SIZE)
+})
+watch(searchQuery, () => { currentPage.value = 1 })
 
-const viewAllLink = computed(() => {
-    return currentStage.value === 'document_evaluator'
-        ? '/document-evaluator-applications'
-        : `/evaluator-applications?stage=${currentStage.value}`;
-});
+// ── User selection & file fetch ───────────────────────────────────────────────
+const selectedUser      = ref(null)
+const selectedUserFiles = ref({})
 
-const refreshDashboard = () => {
-    router.reload({
-        only: ["pendingUsers", "summary", "chartData"],
-        preserveState: true,
-        preserveScroll: true,
-    });
-};
-
-onMounted(() => {
-    autoRefreshTimer.value = setInterval(refreshDashboard, POLL_INTERVAL_MS);
-});
-
-onBeforeUnmount(() => {
-    if (autoRefreshTimer.value) {
-        clearInterval(autoRefreshTimer.value);
-        autoRefreshTimer.value = null;
-    }
-});
-
-// Summary items — 2 cards: in-queue for this stage + already processed
-const summaryItems = computed(() => [
-    {
-        label: "In Queue",
-        value: props.summary?.in_progress ?? 0,
-        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>' },
-        percentage: null,
-        color: 'blue'
-    },
-    {
-        label: "Processed",
-        value: props.summary?.processed ?? 0,
-        icon: { template: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
-        percentage: null,
-        color: 'green'
-    },
-]);
-
-// Chart options
-const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: { display: false },
-        tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            titleColor: '#1f2937',
-            bodyColor: '#374151',
-            borderColor: '#e5e7eb',
-            borderWidth: 1,
-            cornerRadius: 8,
-            padding: 12,
+const selectUser = async (user) => {
+    try {
+        const res = await axios.get(`/dashboard/user-files/${user.id}?stage=${currentStage.value}`)
+        const d = res.data.user
+        selectedUser.value = {
+            ...user,
+            ...d,
+            application: {
+                ...d.application,
+                processes:    d.application?.processes    || [],
+                program:      d.application?.program      || null,
+                second_choice: d.application?.second_choice || null,
+                third_choice:  d.application?.third_choice  || null,
+            },
+            grades:         d.grades          || null,
+            pipeline_status: user.pipeline_status,
         }
-    },
-    scales: {
-        x: {
-            grid: { display: false },
-            ticks: { color: '#6b7280' }
-        },
-        y: {
-            beginAtZero: true,
-            grid: { color: 'rgba(107, 114, 128, 0.1)' },
-            ticks: { 
-                color: '#6b7280',
-                callback: (value) => value.toLocaleString()
+        selectedUserFiles.value = res.data.uploadedFiles || {}
+    } catch (e) {
+        console.error('Failed to load applicant:', e)
+        showToast('Failed to load applicant data.', 'error')
+    }
+}
+
+const closeUserCard = () => {
+    selectedUser.value      = null
+    selectedUserFiles.value = {}
+    isEvaluating.value      = false
+    filesToReturn.value     = {}
+    returnNote.value        = ''
+    refreshDashboard()
+}
+
+// ── Image viewer ──────────────────────────────────────────────────────────────
+const previewImage    = ref('')
+const previewAlt      = ref('Document preview')
+const showImageModal  = ref(false)
+const getFileUrl      = (f) => typeof f === 'string' ? f : (f?.url || '')
+const hasImagePreview = (f) => Boolean(getFileUrl(f)) && (typeof f === 'string' || f?.isImage !== false)
+const openImageModal  = (file, label = '') => {
+    const src = getFileUrl(file)
+    if (!src || !hasImagePreview(file)) return
+    previewImage.value   = src
+    previewAlt.value     = label || file?.original_name || 'Document preview'
+    showImageModal.value = true
+}
+const closeImageModal = () => { showImageModal.value = false; previewImage.value = '' }
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+const toastMsg     = ref('')
+const toastType    = ref('success')
+const toastVisible = ref(false)
+let   toastTimer   = null
+const showToast = (msg, type = 'success') => {
+    if (toastTimer) clearTimeout(toastTimer)
+    toastMsg.value     = msg
+    toastType.value    = type
+    toastVisible.value = true
+    toastTimer = setTimeout(() => { toastVisible.value = false }, 5000)
+}
+
+// ── Review workflow state ─────────────────────────────────────────────────────
+const isEvaluating         = ref(false)
+const filesToReturn        = ref({})
+const returnNote           = ref('')
+const requiresPromissoryNote = ref(false)
+const evaluationError      = ref('')
+const isSubmitting         = ref(false)
+const isStartingReview     = ref(false)
+const isCancellingReview   = ref(false)
+const showCancelModal      = ref(false)
+const showPassModal        = ref(false)
+const showReturnModal      = ref(false)
+
+const returnNoteCharCount = computed(() => returnNote.value.length)
+
+const isEvaluationCompleted = computed(() => {
+    if (!selectedUser.value?.application?.processes) return false
+    const p = selectedUser.value.application.processes.find(x => x.stage === currentStage.value)
+    return p && p.status === 'completed'
+})
+const hasStartedReview = computed(() => {
+    if (!selectedUser.value?.application?.processes) return false
+    const p = selectedUser.value.application.processes.find(x => x.stage === currentStage.value)
+    return p && !!p.started_at
+})
+const reviewStartTime = computed(() => {
+    const p = selectedUser.value?.application?.processes?.find(x => x.stage === currentStage.value)
+    return p?.started_at || null
+})
+
+const startEvaluation = () => { isEvaluating.value = true; evaluationError.value = '' }
+const cancelEvaluation = () => { isEvaluating.value = false; filesToReturn.value = {}; returnNote.value = '' }
+
+const startReview = async () => {
+    const processes = selectedUser.value.application.processes
+    const idx = processes.findIndex(p => p.stage === currentStage.value)
+    if (idx === -1) return showToast('Error finding application process.', 'error')
+    isStartingReview.value = true
+    try {
+        const res = await axios.post(`/evaluator/start-review/${processes[idx].id}`)
+        selectedUser.value = {
+            ...selectedUser.value,
+            application: {
+                ...selectedUser.value.application,
+                processes: processes.map((p, i) => i === idx ? { ...p, started_at: res.data.started_at } : p),
+            },
+        }
+        showToast('Review started.')
+    } catch (err) {
+        if (err.response?.status === 409) {
+            try {
+                const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`)
+                const d = refetch.data.user
+                selectedUser.value = {
+                    ...selectedUser.value, ...d,
+                    application: { ...d.application, processes: d.application?.processes || [] },
+                }
+                refreshDashboard()
+                showToast(err.response?.data?.message || 'Review was already started.', 'error')
+            } catch { /* ignore */ }
+        } else {
+            const msg = err.response?.data?.message || 'Failed to start review.'
+            showToast(msg, 'error')
+            if ([400, 409, 422].includes(err.response?.status)) {
+                refreshDashboard()
+                if (selectedUser.value?.id) {
+                    try {
+                        const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`)
+                        const d = refetch.data.user
+                        selectedUser.value = {
+                            ...selectedUser.value, ...d,
+                            application: { ...d.application, processes: d.application?.processes || [] },
+                        }
+                    } catch { /* ignore */ }
+                }
             }
         }
+    } finally {
+        isStartingReview.value = false
     }
-};
+}
 
-// Chart data - computed from props
+const cancelReview = () => { showCancelModal.value = true }
+
+const confirmCancelReview = async () => {
+    const processes = selectedUser.value.application.processes
+    const idx = processes.findIndex(p => p.stage === currentStage.value)
+    if (idx === -1) return
+    isCancellingReview.value = true
+    try {
+        await axios.post(`/evaluator/cancel-review/${processes[idx].id}`)
+        selectedUser.value = {
+            ...selectedUser.value,
+            application: {
+                ...selectedUser.value.application,
+                processes: processes.map((p, i) => i === idx ? { ...p, started_at: null, reviewed_by: null } : p),
+            },
+        }
+        showToast('Review cancelled.', 'info')
+        showCancelModal.value = false
+    } catch (err) {
+        const msg = err.response?.data?.message || 'Failed to cancel review.'
+        showToast(msg, 'error')
+        if ([400, 409, 422].includes(err.response?.status)) {
+            refreshDashboard()
+            if (selectedUser.value?.id) {
+                try {
+                    const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`)
+                    const d = refetch.data.user
+                    selectedUser.value = {
+                        ...selectedUser.value, ...d,
+                        application: { ...d.application, processes: d.application?.processes || [] },
+                    }
+                } catch { /* ignore */ }
+            }
+        }
+    } finally {
+        isCancellingReview.value = false
+    }
+}
+
+const promptReturn = () => {
+    const selected = Object.keys(filesToReturn.value).filter(k => filesToReturn.value[k])
+    if (isDocEval.value && selected.length === 0 && !returnNote.value.trim()) {
+        return showToast('Please select at least one file or provide a reason.', 'error')
+    }
+    if (!isDocEval.value && !returnNote.value.trim()) {
+        return showToast('Please provide a reason.', 'error')
+    }
+    showReturnModal.value = true
+}
+
+const submitReturn = async () => {
+    evaluationError.value = ''
+    if (returnNoteCharCount.value > 400) {
+        evaluationError.value = 'The reason cannot exceed 400 characters.'
+        showReturnModal.value = false
+        return
+    }
+    isSubmitting.value = true
+    try {
+        const payload = {
+            note: returnNote.value,
+            requires_promissory_note: requiresPromissoryNote.value,
+            ...(isDocEval.value
+                ? { requires_guidance_office: true }
+                : { requires_admission_office: true }),
+        }
+        await axios.post(`/evaluator/flag-application/${selectedUser.value.id}?stage=${currentStage.value}`, payload)
+        showToast(isDocEval.value ? 'Flagged for Guidance Office.' : 'Flagged for Admissions Office.')
+        showReturnModal.value = false
+        closeUserCard()
+    } catch (err) {
+        showReturnModal.value = false
+        const msg = err.response?.data?.message || err.response?.data?.errors?.note?.[0] || 'Action failed.'
+        evaluationError.value = msg
+        showToast(msg, 'error')
+        if ([400, 409, 422].includes(err.response?.status)) {
+            refreshDashboard()
+            if (selectedUser.value?.id) {
+                try {
+                    const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`)
+                    const d = refetch.data.user
+                    selectedUser.value = {
+                        ...selectedUser.value, ...d,
+                        application: { ...d.application, processes: d.application?.processes || [] },
+                    }
+                } catch { /* ignore */ }
+            }
+        }
+    } finally {
+        isSubmitting.value = false
+    }
+}
+
+const submitPass = async () => {
+    evaluationError.value = ''
+    isSubmitting.value = true
+    try {
+        await axios.post(`/evaluator/pass-application/${selectedUser.value.id}?stage=${currentStage.value}`, { note: '' })
+        showPassModal.value = false
+        closeUserCard()
+        showToast('Applicant passed successfully!')
+    } catch (err) {
+        showPassModal.value = false
+        const msg = err.response?.data?.message || 'Failed to pass application.'
+        evaluationError.value = msg
+        showToast(msg, 'error')
+        if ([400, 409, 422].includes(err.response?.status)) {
+            refreshDashboard()
+            if (selectedUser.value?.id) {
+                try {
+                    const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`)
+                    const d = refetch.data.user
+                    selectedUser.value = {
+                        ...selectedUser.value, ...d,
+                        application: { ...d.application, processes: d.application?.processes || [] },
+                    }
+                } catch { /* ignore */ }
+            }
+        }
+    } finally {
+        isSubmitting.value = false
+    }
+}
+
+// ── Status helpers ────────────────────────────────────────────────────────────
+const pipelineStatusLabel = (s) => {
+    const map = {
+        for_evaluation: 'For Evaluation', evaluation_returned: 'Returned', evaluation_passed: 'Passed',
+        for_interview: 'For Interview', interview_returned: 'Returned', interview_passed: 'Passed',
+        for_medical: 'For Medical', medical_cleared: 'Medical Cleared', for_records: 'For Records',
+        officially_enrolled: 'Enrolled', rejected: 'Rejected', submitted: 'Submitted', returned: 'Returned',
+    }
+    return map[s] || (s ? s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ') : 'Unknown')
+}
+
+const pipelineStatusClass = (s) => {
+    if (['evaluation_passed', 'interview_passed', 'medical_cleared', 'officially_enrolled'].includes(s))
+        return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300'
+    if (['evaluation_returned', 'interview_returned', 'rejected', 'returned'].includes(s))
+        return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
+    if (['for_evaluation', 'submitted'].includes(s))
+        return 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
+    if (s === 'for_interview') return 'bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300'
+    if (s === 'for_medical')   return 'bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-300'
+    if (s === 'for_records')   return 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300'
+    return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+}
+
+const formatDate = (d) => {
+    if (!d) return '—'
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+const formatDateTime = (d) => {
+    if (!d) return '—'
+    return new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })
+}
+
+// ── Chart ─────────────────────────────────────────────────────────────────────
 const chartDataset = computed(() => ({
     labels: props.chartData.labels || [],
     datasets: [
-        { 
-            label: "Accepted", 
-            data: props.chartData.accepted || [], 
-            borderColor: "#10B981",
-            backgroundColor: "rgba(16, 185, 129, 0.1)",
-            fill: true,
-            tension: 0.4,
-            pointBackgroundColor: "#10B981",
-            pointBorderColor: "#ffffff",
-            pointBorderWidth: 2,
-            pointRadius: 4,
-        },
-        { 
-            label: "Pending", 
-            data: props.chartData.submitted || [], 
-            borderColor: "#EAB308",
-            backgroundColor: "rgba(234, 179, 8, 0.1)",
-            fill: true,
-            tension: 0.4,
-            pointBackgroundColor: "#EAB308",
-            pointBorderColor: "#ffffff",
-            pointBorderWidth: 2,
-            pointRadius: 4,
-        },
-        { 
-            label: "Returned", 
-            data: props.chartData.returned || [], 
-            borderColor: "#EF4444",
-            backgroundColor: "rgba(239, 68, 68, 0.1)",
-            fill: true,
-            tension: 0.4,
-            pointBackgroundColor: "#EF4444",
-            pointBorderColor: "#ffffff",
-            pointBorderWidth: 2,
-            pointRadius: 4,
-        },
+        { label: 'Submitted', data: props.chartData.submitted || [], borderColor: '#800000', backgroundColor: 'rgba(128,0,0,0.08)', fill: true, tension: 0.4, pointBackgroundColor: '#800000', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 3, pointHoverRadius: 5 },
+        { label: 'Accepted',  data: props.chartData.accepted  || [], borderColor: '#15803D', backgroundColor: 'rgba(21,128,61,0.07)',  fill: true, tension: 0.4, pointBackgroundColor: '#15803D', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 3, pointHoverRadius: 5 },
+        { label: 'Returned',  data: props.chartData.returned  || [], borderColor: '#B91C1C', backgroundColor: 'rgba(185,28,28,0.06)',  fill: true, tension: 0.4, pointBackgroundColor: '#B91C1C', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 3, pointHoverRadius: 5 },
     ],
-}));
-
-// Display only pending applicants in the recent applications section
-const recentListContainer = ref(null);
-const dynamicPageSize = ref(2);
-
-const updateDynamicPageSize = () => {
-    if (!recentListContainer.value) return;
-    const availableHeight = recentListContainer.value.clientHeight;
-    // Each applicant card is ~115px (including padding, text, borders) with gap-3 (12px) = ~127px per item
-    // Calculate how many full items can comfortably fit without overflowing or clipping
-    const calculated = Math.floor((availableHeight + 12) / 127);
-    dynamicPageSize.value = Math.max(2, calculated);
-};
-
-let resizeObserver = null;
-onMounted(() => {
-    if (recentListContainer.value && typeof ResizeObserver !== "undefined") {
-        resizeObserver = new ResizeObserver(() => {
-            updateDynamicPageSize();
-        });
-        resizeObserver.observe(recentListContainer.value);
-    }
-    updateDynamicPageSize();
-});
-
-onBeforeUnmount(() => {
-    if (resizeObserver) {
-        resizeObserver.disconnect();
-        resizeObserver = null;
-    }
-});
-
-const currentPage = ref(1);
-
-const filteredApplicants = computed(() => {
-    const applicants = props.pendingUsers || [];
-    const query = searchQuery.value.trim().toLowerCase();
-    if (!query) return applicants;
-    return applicants.filter(applicant =>
-        `${applicant.firstname} ${applicant.lastname}`.toLowerCase().includes(query) ||
-        applicant.email?.toLowerCase().includes(query)
-    );
-});
-
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredApplicants.value.length / dynamicPageSize.value)));
-
-const displayedApplicants = computed(() => {
-    const start = (currentPage.value - 1) * dynamicPageSize.value;
-    return filteredApplicants.value.slice(start, start + dynamicPageSize.value);
-});
-
-watch([searchQuery, dynamicPageSize], () => {
-    if (currentPage.value > totalPages.value) {
-        currentPage.value = Math.max(1, totalPages.value);
-    }
-});
-
-watch(searchQuery, () => { currentPage.value = 1; });
-
-// Methods
-const getStatusClass = (status) => {
-    const s = (status || "").toLowerCase();
-    if (s === "accepted") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-    if (s === "cleared_for_enrollment" || s === "officially_enrolled") return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-    if (s === "submitted" || s === "pending") return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
-    if (s === "returned") return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
-    return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
-};
-
-const getEvaluationStatusText = (pipelineStatus) => {
-    switch (pipelineStatus) {
-        case 'for_evaluation': return 'For Evaluation';
-        case 'evaluation_returned': return 'Returned for Revision';
-        case 'evaluation_passed': return 'Evaluation Passed';
-        case 'for_interview': return 'For Interview';
-        case 'interview_returned': return 'Returned for Revision';
-        case 'interview_passed': return 'Interview Passed';
-        case 'interview_transferred': return 'Course Transferred';
-        case 'for_medical': return 'For Medical';
-        case 'medical_cleared': return 'Medical Cleared';
-        case 'medical_rejected': return 'Medical Rejected';
-        case 'for_records': return 'For Records';
-        case 'officially_enrolled': return 'Enrolled';
-        case 'rejected': return 'Rejected';
-        case 'submitted': return 'Submitted';
-        case 'returned': return 'Returned';
-        default: return pipelineStatus ? (pipelineStatus.charAt(0).toUpperCase() + pipelineStatus.slice(1).replace(/_/g, ' ')) : 'Unknown';
-    }
-};
-
-const getEvaluationStatusClass = (pipelineStatus) => {
-    switch (pipelineStatus) {
-        case 'for_evaluation': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
-        case 'evaluation_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        case 'evaluation_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
-        case 'for_interview': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
-        case 'interview_returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        case 'interview_passed': return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
-        case 'interview_transferred': return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
-        case 'for_medical': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
-        case 'medical_cleared': return 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300';
-        case 'medical_rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        case 'for_records': return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300';
-        case 'officially_enrolled': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300';
-        case 'rejected': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        case 'submitted': return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
-        case 'returned': return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
-        default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
-    }
-};
-
-const isEvaluationCompleted = computed(() => {
-    if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
-    const targetStage = currentStage.value;
-    const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
-    return evaluatorProcess && evaluatorProcess.status === 'completed';
-});
-
-const hasStartedReview = computed(() => {
-    if (!selectedUser.value || !selectedUser.value.application?.processes) return false;
-    const targetStage = currentStage.value;
-    const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
-    return evaluatorProcess && !!evaluatorProcess.started_at;
-});
-
-const reviewStartTime = computed(() => {
-    if (!selectedUser.value || !selectedUser.value.application?.processes) return null;
-    const targetStage = currentStage.value;
-    const evaluatorProcess = selectedUser.value.application.processes.find(p => p.stage === targetStage);
-    return evaluatorProcess?.started_at || null;
-});
-
-const isStartingReview = ref(false);
-const isCancellingReview = ref(false);
-const showCancelModal = ref(false);
-
-const cancelReview = () => {
-    showCancelModal.value = true;
-};
-
-const confirmCancelReview = async () => {
-
-    const targetStage = currentStage.value;
-    const processes = selectedUser.value.application.processes;
-    const processIndex = processes.findIndex(p => p.stage === targetStage);
-
-    if (processIndex === -1) return;
-
-    const evaluatorProcess = processes[processIndex];
-    isCancellingReview.value = true;
-    try {
-        await axios.post(`/evaluator/cancel-review/${evaluatorProcess.id}`);
-        // Rebuild selectedUser.value to clear started_at
-        selectedUser.value = {
-            ...selectedUser.value,
-            application: {
-                ...selectedUser.value.application,
-                processes: processes.map((p, i) =>
-                    i === processIndex ? { ...p, started_at: null, reviewed_by: null } : p
-                ),
-            },
-        };
-        showToast("Review cancelled.", "info");
-        showCancelModal.value = false;
-    } catch (error) {
-        const msg = error.response?.data?.message || "Failed to cancel review.";
-        showToast(msg, "error");
-        if ([400, 409, 422].includes(error.response?.status)) {
-            refreshDashboard();
-            if (selectedUser.value?.id) {
-                try {
-                    const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`);
-                    const userData = refetch.data.user;
-                    selectedUser.value = {
-                        ...selectedUser.value,
-                        ...userData,
-                        application: {
-                            ...userData.application,
-                            processes: userData.application?.processes || [],
-                        },
-                    };
-                } catch (e) {
-                    closeUserCard();
-                }
-            }
-        }
-    } finally {
-        isCancellingReview.value = false;
-    }
-};
-
-const startReview = async () => {
-    const targetStage = currentStage.value;
-    const processes = selectedUser.value.application.processes;
-    const processIndex = processes.findIndex(p => p.stage === targetStage);
-    
-    if (processIndex === -1) {
-        showToast("Error finding application process.", "error");
-        return;
-    }
-
-    const evaluatorProcess = processes[processIndex];
-    isStartingReview.value = true;
-    try {
-        const response = await axios.post(`/evaluator/start-review/${evaluatorProcess.id}`);
-        // Rebuild selectedUser.value to trigger Vue reactivity
-        selectedUser.value = {
-            ...selectedUser.value,
-            application: {
-                ...selectedUser.value.application,
-                processes: processes.map((p, i) =>
-                    i === processIndex ? { ...p, started_at: response.data.started_at } : p
-                ),
-            },
-        };
-        showToast("Review started successfully.");
-    } catch (error) {
-        if (error.response?.status === 409) {
-            // Already started — re-fetch user to sync UI with DB state
-            try {
-                const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`);
-                const userData = refetch.data.user;
-                selectedUser.value = {
-                    ...selectedUser.value,
-                    ...userData,
-                    application: {
-                        ...userData.application,
-                        processes: userData.application?.processes || [],
-                        program: userData.application?.program || null,
-                        second_choice: userData.application?.second_choice || null,
-                        third_choice: userData.application?.third_choice || null,
-                    },
-                    grades: userData.grades || null,
-                };
-                refreshDashboard();
-                showToast(error.response?.data?.message || "Review was already started.", "error");
-            } catch (refetchErr) {
-                console.error("Refetch failed:", refetchErr);
-            }
-        } else {
-            console.error("Error starting review:", error);
-            showToast(error.response?.data?.message || "Failed to start review.", "error");
-        }
-    } finally {
-        isStartingReview.value = false;
-    }
-};
-
-const getButtonClass = (type) => {
-    const classes = {
-        primary: 'bg-[#9E122C] text-white hover:bg-[#b51834]',
-        success: 'bg-green-600 text-white hover:bg-green-700',
-        danger: 'bg-red-600 text-white hover:bg-red-700',
-        secondary: 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-    };
-    return classes[type] || classes.secondary;
-};
-
-const formatDate = (dateString) => {
-    if (!dateString) return "—";
-    return new Date(dateString).toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
-    });
-};
-
-const formatStage = (stage) => {
-    if (!stage) return 'Unknown Stage';
-    return stage
-        .split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-};
-
-const formatFileKey = (key) => {
-    const map = {
-        file10Front: 'Grade 10 Report Front',
-        file10: 'Grade 10 Report Back',
-        file11Front: "Grade 11 Report Front",
-        file11: "Grade 11 Report Back",
-        file12Front: "Grade 12 Report Front",
-        file12: "Grade 12 Report Back",
-        schoolId: "School ID",
-        nonEnrollCert: "Non-Enrollment Cert",
-        psa: "PSA Birth Certificate",
-        goodMoral: "Good Moral Certificate",
-        underOath: "Under Oath Document",
-        photo2x2: "2x2 Photo",
-    };
-    return map[key] || key;
-};
-
-const getFileUrl = (file) => (typeof file === "string" ? file : file?.url || "");
-
-const hasImagePreview = (file) =>
-    Boolean(getFileUrl(file)) && (typeof file === "string" || file?.isImage !== false);
-
-const capitalize = (str) =>
-    typeof str === "string" ? str.charAt(0).toUpperCase() + str.slice(1).replace('_', ' ') : "";
-
-// User selection and file fetching
-const selectUser = async (user) => {
-    try {
-        const response = await axios.get(`/dashboard/user-files/${user.id}?stage=${currentStage.value}`);
-
-        const userData = response.data.user;
-        selectedUser.value = {
-            ...user,
-            ...userData,
-            application: {
-                ...userData.application,
-                processes: userData.application?.processes || [],
-                program: userData.application?.program || null,
-                second_choice: userData.application?.second_choice || null,
-                third_choice: userData.application?.third_choice || null,
-            },
-            grades: userData.grades || null,
-            pipeline_status: user.pipeline_status,
-        };
-
-        selectedUserFiles.value = response.data.uploadedFiles || {};
-    } catch (error) {
-        console.error("Failed to fetch user data:", error);
-        alert("An error occurred while loading the applicant profile. Please check the Developer Console (F12) for details. Error: " + error.message);
-        selectedUserFiles.value = {};
-        selectedUser.value = null;
-    }
-};
-
-const closeUserCard = () => {
-    selectedUser.value = null;
-    isEvaluating.value = false;
-    filesToReturn.value = {};
-    returnNote.value = "";
-    refreshDashboard();
-};
-
-// Image modal
-const openImageModal = (file, label = "") => {
-    const src = getFileUrl(file);
-    if (!src || !hasImagePreview(file)) {
-        return;
-    }
-
-    previewImage.value = src;
-    previewAlt.value = label || file?.original_name || "Document preview";
-    showImageModal.value = true;
-};
-
-const closeImageModal = () => {
-    showImageModal.value = false;
-    previewImage.value = null;
-    previewAlt.value = "Document preview";
-};
-
-const evaluationError = ref("");
-
-const returnNoteCharCount = computed(() => {
-    return returnNote.value.length;
-});
-
-// Evaluation controls
-const startEvaluation = () => {
-    isEvaluating.value = true;
-    evaluationError.value = "";
-    filesToReturn.value = {};
-    returnNote.value = "";
-};
-
-const cancelEvaluation = () => {
-    isEvaluating.value = false;
-    filesToReturn.value = {};
-    returnNote.value = "";
-};
-
-const isSubmitting = ref(false);
-
-const promptReturn = () => {
-    const selected = Object.keys(filesToReturn.value).filter((k) => filesToReturn.value[k]);
-    if (props.user?.role_id !== 3 && !returnNote.value.trim()) {
-        evaluationError.value = "Please provide a reject reason.";
-        showToast("Please provide a reject reason.", "error");
-        return;
-    } else if (props.user?.role_id !== 8 && selected.length === 0 && !returnNote.value.trim()) {
-        evaluationError.value = "Please select at least one file or provide a return reason.";
-        showToast("Please select at least one file or provide a return reason.", "error");
-        return;
-    }
-    showReturnModal.value = true;
-};
-
-const submitReturn = async () => {
-    evaluationError.value = "";
-    const note = returnNote.value.trim();
-
-    if (returnNoteCharCount.value > 400) {
-        evaluationError.value = "The reason cannot exceed 400 characters.";
-        showReturnModal.value = false;
-        return;
-    }
-
-    isSubmitting.value = true;
-    try {
-        const targetStageForApi = props.stage || (props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
-        if (props.user?.role_id !== 3) {
-            await axios.post(`/evaluator/flag-application/${selectedUser.value.id}?stage=${targetStageForApi}`, {
-                note: returnNote.value,
-                requires_promissory_note: requiresPromissoryNote.value,
-                requires_admission_office: true
-            });
-            showToast("Applicant flagged for Admissions Office!");
-        } else {
-            await axios.post(`/evaluator/flag-application/${selectedUser.value.id}?stage=${targetStageForApi}`, {
-                note: returnNote.value,
-                requires_promissory_note: requiresPromissoryNote.value,
-                requires_guidance_office: true
-            });
-            showToast("Applicant flagged for Guidance Office!");
-        }
-
-        showReturnModal.value = false;
-        closeUserCard();
-    } catch (error) {
-        console.error(error);
-        showReturnModal.value = false;
-        const msg = error.response?.data?.message || error.response?.data?.errors?.note?.[0] || "Action failed. Please try again.";
-        evaluationError.value = msg;
-        showToast(msg, "error");
-        if ([400, 409, 422].includes(error.response?.status)) {
-            refreshDashboard();
-            if (selectedUser.value?.id) {
-                try {
-                    const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`);
-                    const userData = refetch.data.user;
-                    selectedUser.value = {
-                        ...selectedUser.value,
-                        ...userData,
-                        application: {
-                            ...userData.application,
-                            processes: userData.application?.processes || [],
-                            program: userData.application?.program || null,
-                            second_choice: userData.application?.second_choice || null,
-                            third_choice: userData.application?.third_choice || null,
-                        },
-                        grades: userData.grades || null,
-                    };
-                } catch (refetchErr) {
-                    closeUserCard();
-                }
-            }
-        }
-    } finally {
-        isSubmitting.value = false;
-    }
-};
-
-const submitPass = async () => {
-    evaluationError.value = "";
-    isSubmitting.value = true;
-    try {
-        const targetStageForApi = props.stage || (props.user?.role_id === 3 ? 'document_evaluator' : 'grade_evaluator');
-        await axios.post(
-            `/evaluator/pass-application/${selectedUser.value.id}?stage=${targetStageForApi}`,
-            {
-                note: ""
-            }
-        );
-
-        showPassModal.value = false;
-        closeUserCard();
-        showToast("Applicant passed successfully!");
-    } catch (error) {
-        console.error("Error passing application:", error);
-        showPassModal.value = false;
-        const msg = error.response?.data?.message || "Failed to pass application.";
-        evaluationError.value = msg;
-        showToast(msg, "error");
-        if ([400, 409, 422].includes(error.response?.status)) {
-            refreshDashboard();
-            if (selectedUser.value?.id) {
-                try {
-                    const refetch = await axios.get(`/dashboard/user-files/${selectedUser.value.id}?stage=${currentStage.value}`);
-                    const userData = refetch.data.user;
-                    selectedUser.value = {
-                        ...selectedUser.value,
-                        ...userData,
-                        application: {
-                            ...userData.application,
-                            processes: userData.application?.processes || [],
-                            program: userData.application?.program || null,
-                            second_choice: userData.application?.second_choice || null,
-                            third_choice: userData.application?.third_choice || null,
-                        },
-                        grades: userData.grades || null,
-                    };
-                } catch (refetchErr) {
-                    closeUserCard();
-                }
-            }
-        }
-    } finally {
-        isSubmitting.value = false;
-    }
-};
-
-const showPassModal = ref(false);
-const showReturnModal = ref(false);
-
-// Toast notification state
-const toastMessage = ref('');
-const toastType = ref('success');
-const toastVisible = ref(false);
-let toastTimeout = null;
-
-const showToast = (message, type = 'success') => {
-    if (toastTimeout) clearTimeout(toastTimeout);
-    toastMessage.value = message;
-    toastType.value = type;
-    toastVisible.value = true;
-    toastTimeout = setTimeout(() => {
-        toastVisible.value = false;
-    }, 5000);
-};
+}))
+const chartOptions = {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+        legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, boxHeight: 10, borderRadius: 3, usePointStyle: true, pointStyle: 'circle', font: { size: 11 }, color: '#6B7280', padding: 16 } },
+        tooltip: { backgroundColor: '#fff', titleColor: '#111827', bodyColor: '#374151', borderColor: '#E7E5E4', borderWidth: 1, cornerRadius: 8, padding: 12 },
+    },
+    scales: {
+        x: { grid: { display: false }, ticks: { color: '#9CA3AF', font: { size: 11 }, maxRotation: 0 } },
+        y: { beginAtZero: true, grid: { color: 'rgba(156,163,175,0.12)' }, ticks: { color: '#9CA3AF', font: { size: 11 }, callback: v => v.toLocaleString() } },
+    },
+}
 </script>
 
 <template>
-    <Head :title="currentStage === 'document_evaluator' ? 'Document Evaluator Dashboard' : 'Grade Evaluator Dashboard'" />
+    <Head :title="isDocEval ? 'Document Evaluation' : 'Grade Evaluation'" />
     <EvaluatorLayout>
-        <!-- Success Toast Notification -->
+        <!-- Success/Error Toast Notification -->
         <Teleport to="body">
-            <transition enter-active-class="transition ease-out duration-300" enter-from-class="transform opacity-0 translate-y-[-1rem]" enter-to-class="transform opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="transform opacity-100 translate-y-0" leave-to-class="transform opacity-0 translate-y-[-1rem]">
+            <transition
+                enter-active-class="transition ease-out duration-300"
+                enter-from-class="transform opacity-0 translate-y-[-1rem]"
+                enter-to-class="transform opacity-100 translate-y-0"
+                leave-active-class="transition ease-in duration-200"
+                leave-from-class="transform opacity-100 translate-y-0"
+                leave-to-class="transform opacity-0 translate-y-[-1rem]"
+            >
                 <div v-if="toastVisible" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-[99999] w-full max-w-md px-4 pointer-events-auto">
                     <div :class="['rounded-lg shadow-2xl overflow-hidden border', toastType === 'success' ? 'bg-green-50 dark:bg-green-900 border-green-500 dark:border-green-400' : 'bg-red-50 dark:bg-red-900 border-red-500 dark:border-red-400']">
                         <div class="p-4 flex items-start">
@@ -745,7 +445,7 @@ const showToast = (message, type = 'success') => {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <div class="ml-3 w-0 flex-1 pt-0.5">
-                                <p :class="['text-sm font-medium', toastType === 'success' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200']">{{ toastMessage }}</p>
+                                <p :class="['text-sm font-medium', toastType === 'success' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200']">{{ toastMsg }}</p>
                             </div>
                             <div class="ml-4 flex-shrink-0 flex">
                                 <button @click="toastVisible = false" :class="['rounded-md inline-flex focus:outline-none', toastType === 'success' ? 'text-green-500 hover:text-green-600' : 'text-red-500 hover:text-red-600']">
@@ -761,255 +461,281 @@ const showToast = (message, type = 'success') => {
             </transition>
         </Teleport>
 
-        <div class="dash-shell">
-        <!-- Header & Stats Section -->
-        <div class="px-4 md:px-8 mb-6 shrink-0 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-6">
-            <!-- Header Left -->
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-1">
+        <!-- ── Toast ──────────────────────────────────────────────────────── -->
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="-translate-y-3 opacity-0"
+            enter-to-class="translate-y-0 opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="translate-y-0 opacity-100"
+            leave-to-class="-translate-y-3 opacity-0"
+        >
+            <div
+                v-if="toastVisible"
+                role="status"
+                aria-live="polite"
+                class="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium max-w-sm"
+                :class="toastType === 'success'
+                    ? 'bg-green-50 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-200 dark:border-green-700'
+                    : toastType === 'info'
+                    ? 'bg-sky-50 text-sky-800 border-sky-200 dark:bg-sky-900/30 dark:text-sky-200 dark:border-sky-700'
+                    : 'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-200 dark:border-red-700'"
+            >
+                <svg v-if="toastType === 'success'" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <svg v-else-if="toastType === 'info'" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <svg v-else class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                {{ toastMsg }}
+                <button @click="toastVisible = false" class="ml-auto shrink-0 p-0.5 rounded hover:opacity-70 transition" aria-label="Dismiss">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+        </Transition>
+
+        <div class="dash-shell-scroll space-y-6 pb-8">
+
+            <!-- ── Page header ──────────────────────────────────────────── -->
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div>
-                    <BlurText
-                        :text="currentStage === 'document_evaluator' ? 'Document Evaluator Dashboard' : 'Grade Evaluator Dashboard'"
-                        :delay="100"
-                        animate-by="words"
-                        direction="top"
-                        class-name="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white"
-                    />
-                    <BlurText
-                        text="Review and evaluate application submissions."
-                        :delay="60"
-                        animate-by="words"
-                        direction="top"
-                        :step-duration="0.3"
-                        class-name="text-gray-600 dark:text-gray-400 mt-2"
-                    />
+                    <div class="flex items-center gap-2.5 mb-1">
+                        <span
+                            class="w-3 h-3 rounded-full"
+                            :style="{ backgroundColor: stageHex }"
+                            aria-hidden="true"
+                        ></span>
+                        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+                            {{ stageLabel }}
+                        </h1>
+                    </div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        <template v-if="isDocEval">
+                            Review submitted admission documents and flag or pass applications for grade evaluation.
+                        </template>
+                        <template v-else>
+                            Verify academic grades and pass qualified applicants to the interview stage.
+                        </template>
+                    </p>
                 </div>
-                <div class="relative w-full sm:w-64 shrink-0">
-                    <input
-                        id="searchQuery"
-                        name="searchQuery"
-                        v-model="searchQuery"
-                        type="text"
-                        placeholder="Search applicants..."
-                        class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#9E122C] focus:border-transparent"
-                    />
-                    <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                </div>
-            </div>
-
-            <!-- Stats Grid -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 shrink-0 xl:min-w-[420px]">
-                <div
-                    v-for="(item, index) in summaryItems"
-                    :key="index"
-                    class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 flex items-center justify-between gap-4"
+                <a
+                    :href="isDocEval ? '/document-evaluator-applications' : '/evaluator-applications'"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-maroon-light text-white hover:bg-maroon transition shadow-sm self-start sm:self-auto"
                 >
-                    <div>
-                        <p class="text-gray-600 dark:text-gray-400 text-xs font-medium mb-1">{{ item.label }}</p>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white leading-none">{{ item.value.toLocaleString() }}</p>
-                    </div>
-                    <div :class="[
-                        'p-2.5 rounded-lg shrink-0',
-                        item.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300' :
-                        item.color === 'green' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300' :
-                        item.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-300' :
-                        'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300'
-                    ]">
-                        <component :is="item.icon" class="w-5 h-5" />
-                    </div>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                    All Applications
+                </a>
+            </div>
+
+            <!-- ── Summary metric cards ───────────────────────────────── -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="metric-card border-l-4 animate-slide-up" :style="{ borderLeftColor: stageHex }">
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400">In Queue</p>
+                    <p class="mt-1 text-2xl font-bold tabular-nums text-gray-900 dark:text-white">
+                        {{ (summary?.in_progress ?? 0).toLocaleString() }}
+                    </p>
+                    <p class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">Awaiting evaluation</p>
+                </div>
+                <div class="metric-card border-l-4 border-l-green-600 animate-slide-up">
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Processed</p>
+                    <p class="mt-1 text-2xl font-bold tabular-nums text-green-700 dark:text-green-400">
+                        {{ (summary?.processed ?? 0).toLocaleString() }}
+                    </p>
+                    <p class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">Evaluations completed</p>
                 </div>
             </div>
-        </div>
 
-        <!-- Main Content Grid -->
-        <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-6 px-4 md:px-8">
-            <!-- Left Column: Chart -->
-            <div class="lg:col-span-2 flex flex-col min-h-0">
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 h-full flex flex-col">
-                    <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <!-- ── Main grid: queue (primary) + chart (secondary) ─────── -->
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+
+                <!-- Applicant queue (2/3) -->
+                <div class="xl:col-span-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-card shadow-card flex flex-col">
+                    <!-- Queue header -->
+                    <div class="px-5 pt-5 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
                         <div>
-                            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Applications Overview</h3>
-                            <p class="text-gray-600 dark:text-gray-400 text-sm">Daily evaluation trends</p>
-                        </div>
-            <div class="relative">
-              <button 
-                @click="showDateFilter = !showDateFilter"
-                class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#9E122C]/50"
-              >
-                <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
-                Date Filter
-                <svg class="w-4 h-4 ml-1 text-gray-400 transition-transform duration-200" :class="{'rotate-180': showDateFilter}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              <div 
-                v-if="showDateFilter" 
-                class="absolute right-0 mt-2 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xl z-10 w-72 origin-top-right transition-all"
-              >
-                <div class="flex justify-between items-center mb-4">
-                  <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Custom Range</h4>
-                  <button @click="showDateFilter = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                  </button>
-                </div>
-                <div class="space-y-4">
-                  <div>
-                    <label for="startDateFilter" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Start Date</label>
-                    <input 
-                      id="startDateFilter"
-                      name="startDateFilter"
-                      type="date" 
-                      v-model="startDateFilter"
-                      class="w-full text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#9E122C] focus:ring-[#9E122C] rounded-lg shadow-sm transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label for="endDateFilter" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">End Date</label>
-                    <input 
-                      id="endDateFilter"
-                      name="endDateFilter"
-                      type="date" 
-                      v-model="endDateFilter"
-                      class="w-full text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#9E122C] focus:ring-[#9E122C] rounded-lg shadow-sm transition-colors"
-                    />
-                  </div>
-                  <div class="pt-2">
-                    <button 
-                      @click="applyFilters(); showDateFilter = false;"
-                      class="w-full inline-flex justify-center items-center gap-1.5 px-4 py-2.5 bg-[#9E122C] text-white text-sm font-semibold rounded-lg hover:bg-[#b51834] transition-all shadow-md active:scale-95"
-                    >
-                      Apply Filter
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-                    </div>
-                    
-                    <div class="flex flex-wrap gap-4 mb-6">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-3 h-3 rounded-full bg-[#10B981]"></div>
-                            <span class="text-sm text-gray-600 dark:text-gray-400">Accepted</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <div class="w-3 h-3 rounded-full bg-[#EAB308]"></div>
-                            <span class="text-sm text-gray-600 dark:text-gray-400">Pending</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <div class="w-3 h-3 rounded-full bg-[#EF4444]"></div>
-                            <span class="text-sm text-gray-600 dark:text-gray-400">Returned</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex-1 min-h-0 w-full">
-                        <LineChart :chart-data="chartDataset" :options="chartOptions" class="w-full h-full" />
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Column: Recent Applications -->
-            <div class="h-full min-h-0">
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 h-full flex flex-col">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-1">Pending Review</h3>
-                            <p class="text-gray-600 dark:text-gray-400 text-sm">Applications awaiting evaluation</p>
-                        </div>
-                        <Link :href="viewAllLink"
-                              class="text-sm text-[#9E122C] hover:text-[#b51834] font-medium transition dark:text-white dark:hover:text-white">
-                            View All
-                        </Link>
-                    </div>
-                    
-                    <div ref="recentListContainer" class="space-y-3 flex-1 overflow-y-auto min-h-0">
-                        <div
-                            v-for="applicant in displayedApplicants"
-                            :key="applicant.id"
-                            @click="selectUser(applicant)"
-                            class="p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition cursor-pointer"
-                        >
-                            <div class="flex items-center justify-between mb-3 gap-2">
-                                <div class="flex items-center space-x-3 min-w-0">
-                                    <div class="w-10 h-10 bg-[#9E122C] rounded-full flex items-center justify-center text-white font-semibold dark:bg-gray-900 dark:text-gray-900 shrink-0">
-                                        {{ applicant.firstname?.[0] || '' }}{{ applicant.lastname?.[0] || '' }}
-                                    </div>
-                                    <div class="min-w-0">
-                                        <h4 class="font-semibold text-gray-900 dark:text-white truncate">
-                                            {{ applicant.firstname }} {{ applicant.lastname }}
-                                        </h4>
-                                        <p class="text-gray-600 dark:text-gray-400 text-sm truncate">{{ applicant.email }}</p>
-                                    </div>
-                                </div>
-                                <span :class="getStatusClass(applicant.application?.status)" 
-                                      class="px-3 py-1 rounded-full text-xs font-semibold shrink-0">
-                                    {{ applicant.application?.status || "Pending" }}
-                                </span>
+                            <div class="flex items-center gap-3">
+                                <h2 class="text-base font-semibold text-gray-900 dark:text-white">Pending Queue</h2>
+                                <Link :href="viewAllLink" class="text-xs text-maroon-light hover:text-maroon font-medium transition dark:text-red-400 dark:hover:text-red-300">
+                                    View All
+                                </Link>
                             </div>
-                            
-                            <div class="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <p class="text-gray-500 dark:text-gray-400">Course</p>
-                                    <p class="text-gray-900 dark:text-white font-medium">{{ applicant.application?.program?.code || "—" }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-gray-500 dark:text-gray-400">Applied</p>
-                                    <p class="text-gray-900 dark:text-white font-medium">{{ formatDate(applicant.application?.created_at) }}</p>
-                                </div>
-                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                {{ filteredApplicants.length }} applicant{{ filteredApplicants.length !== 1 ? 's' : '' }} — click a row to open evaluation
+                            </p>
                         </div>
-                        
-                        <!-- Empty state -->
-                        <div v-if="displayedApplicants.length === 0" class="text-center py-8">
-                            <svg class="w-12 h-12 text-gray-400 mx-auto mb-3 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                        <!-- Search -->
+                        <div class="relative sm:w-56 shrink-0">
+                            <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                             </svg>
-                            <p class="text-gray-500 dark:text-gray-400">No pending applications</p>
+                            <input
+                                v-model="searchQuery"
+                                type="search"
+                                placeholder="Search applicant…"
+                                class="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-maroon-light focus:border-maroon-light transition"
+                                aria-label="Search applicants"
+                            />
                         </div>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="flex-1 overflow-x-auto">
+                        <table class="w-full text-sm" aria-label="Pending evaluation queue">
+                            <thead>
+                                <tr class="border-b border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/30">
+                                    <th class="text-left px-5 py-2.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Applicant</th>
+                                    <th class="text-left px-3 py-2.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide hidden sm:table-cell">Program</th>
+                                    <th class="text-left px-3 py-2.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide hidden md:table-cell">Submitted</th>
+                                    <th class="text-left px-3 py-2.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status</th>
+                                    <th class="px-5 py-2.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                <template v-if="displayedApplicants.length === 0">
+                                    <tr>
+                                        <td colspan="5" class="px-5 py-12 text-center">
+                                            <svg class="w-10 h-10 mx-auto text-gray-300 dark:text-gray-700 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                            </svg>
+                                            <p class="text-sm text-gray-400 dark:text-gray-500">
+                                                {{ searchQuery ? 'No results found' : 'Queue is empty — no pending evaluations' }}
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </template>
+                                <tr
+                                    v-for="applicant in displayedApplicants"
+                                    :key="applicant.id"
+                                    @click="selectUser(applicant)"
+                                    class="hover:bg-gray-50/70 dark:hover:bg-gray-800/50 cursor-pointer transition group"
+                                >
+                                    <!-- Applicant -->
+                                    <td class="px-5 py-3">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-7 h-7 rounded-full bg-maroon-50 text-maroon-light dark:bg-maroon-900/30 dark:text-maroon-200 flex items-center justify-center text-[11px] font-semibold shrink-0" aria-hidden="true">
+                                                {{ (applicant.firstname || '?').charAt(0) }}{{ (applicant.lastname || '').charAt(0) }}
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p class="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">
+                                                    {{ applicant.firstname }} {{ applicant.lastname }}
+                                                    <span v-if="applicant.is_masked" class="ml-1 px-1 py-0.5 rounded text-[9px] font-mono bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">MASKED</span>
+                                                </p>
+                                                <p class="text-[10px] text-gray-400 dark:text-gray-500 truncate">{{ applicant.email }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <!-- Program -->
+                                    <td class="px-3 py-3 hidden sm:table-cell">
+                                        <span class="text-xs text-gray-600 dark:text-gray-400 font-medium">{{ applicant.program?.code || '—' }}</span>
+                                    </td>
+                                    <!-- Submitted -->
+                                    <td class="px-3 py-3 hidden md:table-cell">
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ formatDate(applicant.application?.created_at || applicant.created_at) }}</span>
+                                    </td>
+                                    <!-- Status -->
+                                    <td class="px-3 py-3">
+                                        <span class="stage-badge" :class="pipelineStatusClass(applicant.pipeline_status)">
+                                            {{ pipelineStatusLabel(applicant.pipeline_status) }}
+                                        </span>
+                                    </td>
+                                    <!-- Action -->
+                                    <td class="px-5 py-3 text-right">
+                                        <button
+                                            @click.stop="selectUser(applicant)"
+                                            class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg text-maroon-light border border-maroon-light/30 bg-maroon-50/60 hover:bg-maroon-50 dark:text-maroon-200 dark:border-maroon-700/40 dark:bg-maroon-900/10 dark:hover:bg-maroon-900/20 transition"
+                                            :aria-label="`Review ${applicant.firstname} ${applicant.lastname}`"
+                                        >
+                                            Review
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
 
                     <!-- Pagination -->
-                    <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <p class="text-xs text-gray-500 dark:text-gray-400">
-                            Page {{ currentPage }} of {{ totalPages }}
-                        </p>
-                        <div class="flex items-center gap-2">
-                            <button
-                                @click="currentPage--"
-                                :disabled="currentPage === 1"
-                                class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                                aria-label="Previous page"
-                            >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                                </svg>
+                    <div class="px-5 py-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between shrink-0">
+                        <p class="text-[11px] text-gray-400 dark:text-gray-500">Page {{ currentPage }} / {{ totalPages }}</p>
+                        <div class="flex items-center gap-1.5">
+                            <button @click="currentPage--" :disabled="currentPage === 1" class="w-6 h-6 flex items-center justify-center rounded border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs" aria-label="Previous page">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                             </button>
-                            <button
-                                @click="currentPage++"
-                                :disabled="currentPage === totalPages"
-                                class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                                aria-label="Next page"
-                            >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
+                            <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-6 h-6 flex items-center justify-center rounded border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs" aria-label="Next page">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                             </button>
                         </div>
                     </div>
                 </div>
+
+                <!-- Trend chart (1/3) -->
+                <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-card shadow-card flex flex-col">
+                    <div class="px-5 pt-5 pb-3 flex items-start justify-between shrink-0">
+                        <div>
+                            <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Application Trends</h2>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Daily volume overview</p>
+                        </div>
+                        <!-- Date filter -->
+                        <div class="relative shrink-0">
+                            <button
+                                @click="showDateFilter = !showDateFilter"
+                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                                aria-label="Open date range filter"
+                            >
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                Filter
+                            </button>
+                            <div v-if="showDateFilter" class="absolute right-0 mt-1.5 w-60 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-20 p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Date range</span>
+                                    <button @click="showDateFilter = false" class="text-gray-400 hover:text-gray-600 p-0.5 rounded" aria-label="Close date filter"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                </div>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">Start</label>
+                                        <input type="date" v-model="startDateFilter" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-maroon-light focus:ring-maroon-light"/>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-1">End</label>
+                                        <input type="date" v-model="endDateFilter" class="w-full text-xs rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-maroon-light focus:ring-maroon-light"/>
+                                    </div>
+                                    <button @click="applyFilters" class="w-full px-3 py-2 bg-maroon-light text-white text-xs font-semibold rounded-lg hover:bg-maroon transition">Apply</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 px-5 pb-5 min-h-[200px]">
+                        <LineChart :chart-data="chartDataset" :options="chartOptions" class="w-full h-full"/>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        </div>
+            <!-- ── Quick actions ─────────────────────────────────────── -->
+            <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-card shadow-card p-5">
+                <h2 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <a
+                        v-for="action in [
+                            { label: 'All Applications',    href: isDocEval ? '/document-evaluator-applications' : '/evaluator-applications', desc: 'Open full application list' },
+                            { label: 'My Programs',         href: isDocEval ? '/document-evaluator-programs'    : '/evaluator-programs',       desc: 'Programs assigned to me'  },
+                            ...(isAdminOrSuperAdmin ? [{ label: 'Admin Dashboard', href: '/dashboard', desc: 'Back to admin overview' }] : []),
+                        ]"
+                        :key="action.href"
+                        :href="action.href"
+                        class="group flex flex-col gap-2 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-800/40 hover:border-maroon-100 hover:bg-maroon-50/40 dark:hover:border-maroon-800/40 dark:hover:bg-maroon-900/10 transition"
+                    >
+                        <p class="text-[11px] font-semibold text-gray-700 dark:text-gray-300 group-hover:text-maroon-light dark:group-hover:text-maroon-200 transition">{{ action.label }}</p>
+                        <p class="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">{{ action.desc }}</p>
+                    </a>
+                </div>
+            </div>
 
-        <!-- User Detail Modal -->
+        </div><!-- /dash-shell-scroll -->
+
+        <!-- ── UserDetailsModal ──────────────────────────────────────── -->
         <UserDetailsModal
             :selected-user="selectedUser"
             :selected-user-files="selectedUserFiles"
-            :current-user="null"
+            :current-user="user"
             :available-programs="[]"
             :is-changing-course="false"
             :course-change-message="''"
@@ -1018,173 +744,111 @@ const showToast = (message, type = 'success') => {
             @open-image="openImageModal"
         >
             <template #top-actions>
-                <!-- Evaluator Actions -->
-                <div v-if="!isEvaluationCompleted" class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl space-y-3">
-                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Actions</h4>
+                <div class="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl space-y-3">
+                    <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        {{ stageLabel }} Actions
+                    </h4>
 
-                    <!-- Before review starts -->
-                    <div v-if="!hasStartedReview" class="space-y-3">
+                    <!-- Review status info -->
+                    <div v-if="hasStartedReview" class="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded-lg text-xs text-amber-700 dark:text-amber-300">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Review started {{ formatDateTime(reviewStartTime) }}
+                    </div>
+
+                    <!-- Start / Cancel review -->
+                    <div class="flex gap-2">
                         <button
+                            v-if="!hasStartedReview && !isEvaluationCompleted"
                             @click="startReview"
                             :disabled="isStartingReview"
-                            class="w-full px-4 py-2 bg-[#9E122C] hover:bg-[#800918] text-white rounded-lg transition font-medium min-h-[44px] flex justify-center items-center disabled:opacity-50"
+                            class="flex-1 px-3 py-2 bg-maroon-light text-white rounded-lg hover:bg-maroon transition font-medium text-xs min-h-[36px] disabled:opacity-60"
                         >
-                            <svg v-if="isStartingReview" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <span>{{ isStartingReview ? 'Starting...' : 'Begin Review' }}</span>
+                            {{ isStartingReview ? 'Starting…' : 'Start Review' }}
                         </button>
-                        <Link :href="`/applications/user/${selectedUser?.id}?context=evaluator&stage=${currentStage}`"
-                              :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block text-sm']">
-                            View Full Details
-                        </Link>
+                        <button
+                            v-if="hasStartedReview && !isEvaluationCompleted"
+                            @click="cancelReview"
+                            class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition font-medium text-xs min-h-[36px]"
+                        >
+                            Cancel Review
+                        </button>
                     </div>
 
-                    <!-- During active review -->
-                    <div v-else class="space-y-3">
-                        <div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center justify-between border border-blue-200 dark:border-blue-800">
-                            <div class="flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                Review in progress since {{ new Date(reviewStartTime).toLocaleTimeString() }}
+                    <!-- Evaluation in progress -->
+                    <template v-if="!isEvaluationCompleted">
+                        <div v-if="!isEvaluating" class="flex gap-2">
+                            <button
+                                @click="showPassModal = true"
+                                class="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-xs min-h-[36px]"
+                            >Pass</button>
+                            <button
+                                @click="startEvaluation"
+                                class="flex-1 px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-medium text-xs min-h-[36px]"
+                            >Return / Flag</button>
+                        </div>
+
+                        <!-- Return/flag form -->
+                        <div v-else class="space-y-2">
+                            <label class="block text-[11px] font-medium text-gray-600 dark:text-gray-400">Reason <span class="text-gray-400">({{ returnNoteCharCount }}/400)</span></label>
+                            <textarea
+                                v-model="returnNote"
+                                rows="3"
+                                maxlength="400"
+                                placeholder="Describe the issue…"
+                                class="w-full text-xs rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white resize-none focus:border-maroon-light focus:ring-maroon-light"
+                            ></textarea>
+                            <p v-if="evaluationError" class="text-xs text-red-600 dark:text-red-400">{{ evaluationError }}</p>
+                            <div class="flex gap-2">
+                                <button @click="promptReturn" :disabled="isSubmitting" class="flex-1 px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-medium text-xs min-h-[36px] disabled:opacity-60">{{ isSubmitting ? 'Submitting…' : 'Submit Flag' }}</button>
+                                <button @click="cancelEvaluation" class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition font-medium text-xs min-h-[36px]">Cancel</button>
                             </div>
-                            <button @click="cancelReview" :disabled="isCancellingReview" class="text-xs font-semibold hover:underline text-red-600 dark:text-red-400 disabled:opacity-50">
-                                {{ isCancellingReview ? 'Cancelling...' : 'Cancel' }}
-                            </button>
                         </div>
-                        <div v-if="evaluationError && !isEvaluating" class="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm" role="alert">
-                            {{ evaluationError }}
-                        </div>
-                        <button
-                            v-if="!isEvaluating"
-                            @click="startEvaluation"
-                            :class="[getButtonClass('danger'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px] text-sm']"
-                        >
-                            {{ user?.role_id === 3 ? 'Go to Guidance Office' : 'Go to Admissions Office' }}
-                        </button>
-                        <button
-                            v-if="!isEvaluating"
-                            @click="showPassModal = true"
-                            :class="[getButtonClass('success'), 'w-full px-4 py-2 rounded-lg transition font-medium min-h-[44px] text-sm']"
-                        >
-                            Pass Application
-                        </button>
-                        <Link :href="`/applications/user/${selectedUser?.id}?context=evaluator&stage=${currentStage}`"
-                              :class="[getButtonClass('secondary'), 'w-full px-4 py-2 rounded-lg transition font-medium text-center block text-sm']">
-                            View Full Details
-                        </Link>
-                    </div>
-                </div>
+                    </template>
 
-                <!-- Evaluation completed badge -->
-                <div v-if="isEvaluationCompleted"
-                    class="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl">
-                    <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div>
-                        <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">Evaluation Completed</p>
-                        <p class="text-xs text-blue-600 dark:text-blue-400 mt-0.5">You have already evaluated this application.</p>
-                    </div>
-                </div>
-
-                <!-- Promissory Note badge -->
-                <div v-if="selectedUser?.application?.requires_promissory_note"
-                    class="flex items-start gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl">
-                    <svg class="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                    <div>
-                        <p class="text-sm font-semibold text-orange-700 dark:text-orange-300">Requires Promissory Note</p>
-                        <p class="text-xs text-orange-600 dark:text-orange-400 mt-0.5">This applicant has been tagged to require a Promissory Note.</p>
-                    </div>
-                </div>
-
-                <!-- Evaluation (return/referral) form -->
-                <div v-if="isEvaluating" class="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl space-y-3">
-                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white">{{ user?.role_id === 3 ? 'Guidance Office Referral' : 'Admissions Office Referral' }}</h4>
-                    <p class="text-xs text-amber-700 dark:text-amber-400">{{ user?.role_id === 3 ? 'Provide a reason for sending this applicant to the Guidance Office.' : 'Provide a reason for sending this applicant to the Admissions Office.' }}</p>
-                    <div v-if="evaluationError" class="p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">{{ evaluationError }}</div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Reason <span class="text-red-500">*</span></label>
-                        <textarea
-                            v-model="returnNote"
-                            rows="3"
-                            maxlength="400"
-                            :class="['w-full border rounded-lg p-3 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent', returnNoteCharCount > 400 ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-[#9E122C]']"
-                            placeholder="Explain what the applicant needs to do..."
-                        ></textarea>
-                        <div class="text-right mt-1">
-                            <span :class="{'text-red-500': returnNoteCharCount > 400, 'text-gray-500': returnNoteCharCount <= 400}" class="text-xs">{{ returnNoteCharCount }} / 400</span>
-                        </div>
-                        <div class="flex items-center gap-2 mt-2 px-1">
-                            <input type="checkbox" id="promissoryNoteDashboard" v-model="requiresPromissoryNote"
-                                class="w-4 h-4 text-[#9E122C] bg-white border-gray-300 rounded focus:ring-[#9E122C]" />
-                            <label for="promissoryNoteDashboard" class="text-xs font-medium text-gray-700 dark:text-gray-300">Require Promissory Note</label>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button @click="promptReturn" class="flex-1 px-4 py-2 bg-[#9E122C] hover:bg-[#800918] text-white text-sm font-semibold rounded-lg transition">Confirm</button>
-                        <button @click="cancelEvaluation" :class="[getButtonClass('secondary'), 'px-4 py-2 rounded-lg transition font-medium text-sm']">Cancel</button>
+                    <!-- Already evaluated -->
+                    <div v-else class="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/40 rounded-lg text-xs text-green-700 dark:text-green-300">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Evaluation complete
                     </div>
                 </div>
             </template>
         </UserDetailsModal>
 
-        <!-- Document Image Viewer (zoom / pan / fit-to-viewport) -->
-        <ImageViewer
-            :show="showImageModal"
-            :src="previewImage"
-            :alt="previewAlt"
-            @close="closeImageModal"
+        <!-- ── ImageViewer ───────────────────────────────────────────── -->
+        <ImageViewer :show="showImageModal" :src="previewImage" :alt="previewAlt" @close="closeImageModal"/>
+
+        <!-- ── Cancel review confirm modal ──────────────────────────── -->
+        <ChangesConfirmationModal
+            :show="showCancelModal"
+            title="Cancel Review?"
+            message="This will clear the review start time. The application will remain in your queue."
+            confirm-label="Yes, Cancel"
+            cancel-label="Keep Reviewing"
+            @confirm="confirmCancelReview"
+            @cancel="showCancelModal = false"
         />
 
+        <!-- ── Pass confirm modal ────────────────────────────────────── -->
         <ChangesConfirmationModal
             :show="showPassModal"
-            title="Pass Application"
-            subtitle="Pass this application to the next stage? This cannot be undone."
-            confirmText="Confirm Pass"
-            confirmButtonClass="bg-green-600 hover:bg-green-700 text-white"
-            :hideTable="true"
-            :loading="isSubmitting"
+            title="Pass Application?"
+            :message="`This will mark the application as passed and forward it to the ${isDocEval ? 'grade evaluation' : 'interview'} stage.`"
+            confirm-label="Yes, Pass"
+            cancel-label="Cancel"
             @confirm="submitPass"
             @cancel="showPassModal = false"
         />
 
+        <!-- ── Flag/return confirm modal ─────────────────────────────── -->
         <ChangesConfirmationModal
             :show="showReturnModal"
-            title="Return Application"
-            subtitle="Return this application to the applicant for corrections? This cannot be undone."
-            confirmText="Confirm Return"
-            confirmButtonClass="bg-red-600 hover:bg-red-700 text-white"
-            :hideTable="true"
-            :loading="isSubmitting"
+            title="Flag Application?"
+            :message="`This will flag the application and notify the ${isDocEval ? 'Guidance Office' : 'Admissions Office'}.`"
+            confirm-label="Yes, Flag"
+            cancel-label="Cancel"
             @confirm="submitReturn"
             @cancel="showReturnModal = false"
         />
 
-        <ChangesConfirmationModal
-            :show="showCancelModal"
-            :loading="isCancellingReview"
-            title="Cancel Review"
-            subtitle="Are you sure you want to cancel your current review? Your progress will not be saved."
-            confirm-text="Cancel Review"
-            confirm-button-class="bg-red-600 hover:bg-red-700 text-white"
-            :hide-table="true"
-            @cancel="showCancelModal = false"
-            @confirm="confirmCancelReview"
-        />
     </EvaluatorLayout>
 </template>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-    opacity: 0;
-}
-</style>

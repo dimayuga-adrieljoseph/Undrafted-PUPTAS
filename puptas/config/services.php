@@ -40,6 +40,8 @@ return [
         'scope' => env('IDP_SCOPE', 'openid profile email'),
         'allowed_ips' => env('IDP_ALLOWED_IPS'),
         'health_check_enabled' => (bool) env('IDP_HEALTH_CHECK_ENABLED', true),
+        'admin_access_token' => env('IDP_ADMIN_ACCESS_TOKEN'),
+        'sudo_ttl_minutes' => (int) env('IDP_SUDO_TTL_MINUTES', 720), // Sudo mode is session-based on IDP
     ],
 
     'deepseek' => [

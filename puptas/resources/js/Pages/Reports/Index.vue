@@ -715,7 +715,7 @@ const paginationEnd = computed(() => (currentPage.value - 1) * perPage.value + a
 					<!-- Header row with download button -->
 					<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
 						<div>
-							<p class="text-sm text-gray-500 dark:text-gray-400">Live Key Performance Indicators computed from current admissions data.</p>
+							<p class="text-sm text-gray-500 dark:text-gray-400">Service Time KPI — Average Processing Time per Admissions Step</p>
 						</div>
 						<button
 							@click="downloadKpiPdf"
@@ -731,61 +731,10 @@ const paginationEnd = computed(() => (currentPage.value - 1) * perPage.value + a
 						</button>
 					</div>
 
-					<!-- Error -->
-					<div v-if="kpiError" class="mb-4 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm flex items-center gap-2">
-						<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-						{{ kpiError }}
-					</div>
-
-					<!-- Loading skeletons -->
-					<div v-if="kpiLoading" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-						<div v-for="n in 4" :key="n" class="animate-pulse bg-gray-50 dark:bg-gray-700/40 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
-							<div class="h-3 bg-gray-200 dark:bg-gray-600 rounded w-3/4 mb-3"></div>
-							<div class="h-7 bg-gray-200 dark:bg-gray-600 rounded w-1/2 mb-2"></div>
-							<div class="h-3 bg-gray-200 dark:bg-gray-600 rounded w-2/3 mb-4"></div>
-							<div class="h-5 bg-gray-200 dark:bg-gray-600 rounded-full w-1/3"></div>
-						</div>
-					</div>
-
-					<!-- KPI Cards -->
-					<div v-else-if="kpiData" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-						<div
-							v-for="kpi in kpiData.kpis"
-							:key="kpi.id"
-							class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-5 border border-gray-200 dark:border-gray-700 flex flex-col gap-1 hover:shadow-md transition-shadow"
-						>
-							<p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate" :title="kpi.label">{{ kpi.label }}</p>
-							<p class="text-2xl font-bold text-gray-900 dark:text-white leading-none mt-1">
-								{{ kpi.value.toFixed(2) }}{{ kpi.unit }}
-							</p>
-							<p class="text-xs text-gray-400 dark:text-gray-500">Target: ≥ {{ kpi.target }}{{ kpi.unit }}</p>
-							<div class="mt-2">
-								<span v-if="kpi.met" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">
-									<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-									Target Met
-								</span>
-								<span v-else class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">
-									<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-									Below Target
-								</span>
-							</div>
-						</div>
-					</div>
-
-					<!-- Summary footer -->
-					<div v-if="kpiData && kpiData.summary" class="mt-4 flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-gray-700">
-						<span>Total KPIs: <strong class="text-gray-700 dark:text-gray-200">{{ kpiData.summary.total_kpis }}</strong></span>
-						<span class="text-green-700 dark:text-green-400">Met: <strong>{{ kpiData.summary.kpis_met }}</strong></span>
-						<span class="text-red-700 dark:text-red-400">Below target: <strong>{{ kpiData.summary.kpis_failed }}</strong></span>
-						<span v-if="kpiData.generated_at" class="ml-auto text-gray-400 dark:text-gray-500">
-							Generated {{ new Date(kpiData.generated_at).toLocaleString() }}
-						</span>
-					</div>
-
 					<!-- Service-Time KPI Section -->
-					<div class="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
-						<p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
-							Service Time KPI — Average Processing Time per Admissions Step (Target: ≤ 30 min)
+					<div>
+						<p class="text-xs text-gray-400 dark:text-gray-500 mb-3">
+							Targets are based on averages from the client's sample logsheet of the last school year. A step is considered efficient when the PUPTAS average is at or below the manual baseline.
 						</p>
 
 						<!-- Loading skeletons -->
@@ -810,25 +759,41 @@ const paginationEnd = computed(() => (currentPage.value - 1) * perPage.value + a
 										: 'bg-gray-50 border-gray-200 dark:bg-gray-700/30 dark:border-gray-700'"
 							>
 								<p class="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ s.label }}</p>
+
+								<!-- PUPTAS live average -->
 								<p class="text-2xl font-bold text-gray-900 dark:text-white leading-none">
 									<span v-if="s.avg_min !== null">{{ s.avg_min }} min</span>
 									<span v-else class="text-base text-gray-400 dark:text-gray-500">No data</span>
 								</p>
+
+								<!-- Manual baseline comparison -->
+								<p class="text-xs text-gray-500 dark:text-gray-400">
+									Manual baseline: <strong>{{ s.manual_baseline }} min</strong>
+									<template v-if="s.avg_min !== null && s.manual_baseline">
+										<span v-if="s.avg_min < s.manual_baseline" class="text-green-600 dark:text-green-400 ml-1">
+											({{ (s.manual_baseline - s.avg_min).toFixed(2) }} min faster)
+										</span>
+										<span v-else-if="s.avg_min > s.manual_baseline" class="text-red-500 dark:text-red-400 ml-1">
+											({{ (s.avg_min - s.manual_baseline).toFixed(2) }} min slower)
+										</span>
+										<span v-else class="text-gray-400 ml-1">(equal)</span>
+									</template>
+								</p>
+
 								<p class="text-xs text-gray-400 dark:text-gray-500">
 									{{ s.count }} processed
 									<template v-if="s.timing_count !== undefined && s.timing_count < s.count">
 										· avg from {{ s.timing_count }} timed
 									</template>
-									· Target: ≤ {{ s.target }} min
 								</p>
 								<div class="mt-1">
 									<span v-if="s.met === true" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">
 										<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-										Target Met
+										Faster than Baseline
 									</span>
 									<span v-else-if="s.met === false" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">
 										<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-										Above Target
+										Slower than Baseline
 									</span>
 									<span v-else class="text-xs text-gray-400 dark:text-gray-500">—</span>
 								</div>
@@ -838,6 +803,67 @@ const paginationEnd = computed(() => (currentPage.value - 1) * perPage.value + a
 						<p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
 							Based on all-time data across all dates. Service time = difference between when an applicant started and when their process was completed.
 						</p>
+					</div>
+
+					<!-- Live KPI Section -->
+					<div class="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
+						<p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">
+							Live Key Performance Indicators
+						</p>
+						<p class="text-xs text-gray-400 dark:text-gray-500 mb-3">
+							Computed from current admissions data.
+						</p>
+
+						<!-- Error -->
+						<div v-if="kpiError" class="mb-4 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm flex items-center gap-2">
+							<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+							{{ kpiError }}
+						</div>
+
+						<!-- Loading skeletons -->
+						<div v-if="kpiLoading" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+							<div v-for="n in 4" :key="n" class="animate-pulse bg-gray-50 dark:bg-gray-700/40 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+								<div class="h-3 bg-gray-200 dark:bg-gray-600 rounded w-3/4 mb-3"></div>
+								<div class="h-7 bg-gray-200 dark:bg-gray-600 rounded w-1/2 mb-2"></div>
+								<div class="h-3 bg-gray-200 dark:bg-gray-600 rounded w-2/3 mb-4"></div>
+								<div class="h-5 bg-gray-200 dark:bg-gray-600 rounded-full w-1/3"></div>
+							</div>
+						</div>
+
+						<!-- KPI Cards -->
+						<div v-else-if="kpiData" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+							<div
+								v-for="kpi in kpiData.kpis"
+								:key="kpi.id"
+								class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-5 border border-gray-200 dark:border-gray-700 flex flex-col gap-1 hover:shadow-md transition-shadow"
+							>
+								<p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate" :title="kpi.label">{{ kpi.label }}</p>
+								<p class="text-2xl font-bold text-gray-900 dark:text-white leading-none mt-1">
+									{{ kpi.value.toFixed(2) }}{{ kpi.unit }}
+								</p>
+								<p class="text-xs text-gray-400 dark:text-gray-500">Target: ≥ {{ kpi.target }}{{ kpi.unit }}</p>
+								<div class="mt-2">
+									<span v-if="kpi.met" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">
+										<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+										Target Met
+									</span>
+									<span v-else class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">
+										<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+										Below Target
+									</span>
+								</div>
+							</div>
+						</div>
+
+						<!-- Summary footer -->
+						<div v-if="kpiData && kpiData.summary" class="mt-4 flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-100 dark:border-gray-700">
+							<span>Total KPIs: <strong class="text-gray-700 dark:text-gray-200">{{ kpiData.summary.total_kpis }}</strong></span>
+							<span class="text-green-700 dark:text-green-400">Met: <strong>{{ kpiData.summary.kpis_met }}</strong></span>
+							<span class="text-red-700 dark:text-red-400">Below target: <strong>{{ kpiData.summary.kpis_failed }}</strong></span>
+							<span v-if="kpiData.generated_at" class="ml-auto text-gray-400 dark:text-gray-500">
+								Generated {{ new Date(kpiData.generated_at).toLocaleString() }}
+							</span>
+						</div>
 					</div>
 
 					<!-- Refresh button -->
