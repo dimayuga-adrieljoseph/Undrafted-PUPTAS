@@ -24,6 +24,10 @@ const props = defineProps({
         type: String,
         default: "",
     },
+    courseChangeIsError: {
+        type: Boolean,
+        default: false,
+    },
     changeCourseSelectedId: {
         type: [String, Number],
         default: "",
@@ -300,7 +304,15 @@ const formatGrade = (value) => {
                                 <p class="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
                                     Changing the course of an enrolled applicant will be logged in the audit trail.
                                 </p>
-                                <div v-if="courseChangeMessage" class="mb-3 px-3 py-2 text-sm rounded bg-white text-gray-800 border dark:bg-gray-800 dark:text-gray-300">
+                                <div
+                                    v-if="courseChangeMessage"
+                                    :class="[
+                                        'mb-3 px-3 py-2 text-sm rounded border',
+                                        courseChangeIsError
+                                            ? 'bg-red-50 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700'
+                                            : 'bg-green-50 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700'
+                                    ]"
+                                >
                                     {{ courseChangeMessage }}
                                 </div>
                                 <select
