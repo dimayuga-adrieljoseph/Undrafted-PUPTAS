@@ -112,6 +112,7 @@ return [
         'name_fail_decay'  => (int) env('STATUS_CHECKER_NAME_FAIL_DECAY', 3600),
         'ip_fail_limit'    => (int) env('STATUS_CHECKER_IP_FAIL_LIMIT', 100),
         'ip_fail_decay'    => (int) env('STATUS_CHECKER_IP_FAIL_DECAY', 600),
+        'log_client_ip_diag' => (bool) env('LOG_CLIENT_IP_DIAG', false),
     ],
     'auth' => [
         'login_rate_limit' => (int) env('LOGIN_RATE_LIMIT', 5),

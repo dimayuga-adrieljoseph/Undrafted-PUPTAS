@@ -1136,6 +1136,8 @@ class TestPasserController extends Controller
                     'filename' => $filename,
                     'reference' => \App\Helpers\DataMaskingHelper::maskReferenceForLog($reference),
                 ]);
+            } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+                throw $e;
             } catch (\Exception $e) {
                 \Log::error('SAR regeneration exception', [
                     'filename' => $filename,
