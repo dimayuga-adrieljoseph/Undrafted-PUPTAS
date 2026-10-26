@@ -17,8 +17,12 @@ return Application::configure(basePath: dirname(__DIR__))
         __DIR__ . '/../app/Console/Commands',
     ])
     ->withMiddleware(function (Middleware $middleware) {
-        // Trust proxies for HTTPS detection behind Railway's reverse proxy
-        $middleware->trustProxies(at: '*');
+        // Replace default TrustProxies with TrustRailwayProxy to properly resolve
+        // the client IP from Railway's edge (100.0.0.0/8 private mesh) and protect against spoofing
+        $middleware->replace(
+            \Illuminate\Http\Middleware\TrustProxies::class,
+            \App\Http\Middleware\TrustRailwayProxy::class,
+        );
 
         // Replace Jetstream's ShareInertiaData with a lightweight version
         // to prevent $user->toArray() from loading all relationships on every request
