@@ -13,6 +13,7 @@ $options = getopt('', [
     'action:',
     'actor-id:',
     'applicant-user-id:',
+    'program-id:',
     'target-time-ms:',
     'worker-id:',
     'out-file:',
@@ -22,6 +23,7 @@ $basePath = realpath($options['base-path'] ?? __DIR__ . '/../../..');
 $action = $options['action'] ?? 'interviewer-accept';
 $actorId = (int)($options['actor-id'] ?? 0);
 $applicantUserId = (int)($options['applicant-user-id'] ?? 0);
+$programId = (int)($options['program-id'] ?? 12);
 $targetTimeMs = (float)($options['target-time-ms'] ?? 0);
 $workerId = (int)($options['worker-id'] ?? 1);
 $outFile = $options['out-file'] ?? null;
@@ -34,7 +36,7 @@ if (!$basePath || !file_exists($basePath . '/vendor/autoload.php')) {
 require $basePath . '/vendor/autoload.php';
 
 // 1. Explicitly require target controller from base path before composer autoloads it via junction
-if ($action === 'interviewer-accept') {
+if (in_array($action, ['interviewer-accept', 'interviewer-accept-last-slot'], true)) {
     require_once $basePath . '/app/Http/Controllers/InterviewerDashboardController.php';
 } elseif ($action === 'registrar-tag') {
     require_once $basePath . '/app/Http/Controllers/RecordStaffDashboardController.php';
@@ -68,11 +70,14 @@ if (!$actor) {
 Auth::login($actor);
 
 // 4. Prepare request
-if ($action === 'interviewer-accept') {
+if (in_array($action, ['interviewer-accept', 'interviewer-accept-last-slot'], true)) {
     $request = \Illuminate\Http\Request::create(
-        '/interviewer/accept/' . $applicantUserId,
+        '/interviewer-dashboard/accept/' . $applicantUserId,
         'POST',
-        ['custom_notes' => 'Parallel race test run']
+        [
+            'program_id' => $programId,
+            'notes'      => 'Parallel race test run',
+        ]
     );
 } elseif ($action === 'registrar-tag') {
     $request = \App\Http\Requests\EnrollmentTagRequest::create(
@@ -110,7 +115,7 @@ $statusCode = 200;
 $responseBody = '';
 
 try {
-    if ($action === 'interviewer-accept') {
+    if (in_array($action, ['interviewer-accept', 'interviewer-accept-last-slot'], true)) {
         $controller = $app->make(\App\Http\Controllers\InterviewerDashboardController::class);
         $response = $controller->accept($request, $applicantUserId);
     } elseif ($action === 'registrar-tag') {

@@ -117,6 +117,9 @@ if (!$program) {
 if ($action === 'interviewer-accept') {
     $program->slots = 50;
     $program->save();
+} elseif ($action === 'interviewer-accept-last-slot') {
+    $program->slots = 1;
+    $program->save();
 }
 
 // Create or retrieve dedicated test actor (never store passwords in files)
@@ -124,9 +127,10 @@ $actorEmail = "actor_{$prefix}@example.local";
 $actor = User::withTrashed()->where('email', $actorEmail)->first();
 
 $roleMap = [
-    'interviewer-accept' => RoleId::Interviewer->value,
-    'registrar-tag'      => RoleId::Registrar->value,
-    'evaluator-pass'     => RoleId::DocumentEvaluator->value,
+    'interviewer-accept'           => RoleId::Interviewer->value,
+    'interviewer-accept-last-slot' => RoleId::Interviewer->value,
+    'registrar-tag'                => RoleId::Registrar->value,
+    'evaluator-pass'               => RoleId::DocumentEvaluator->value,
 ];
 $actorRole = $roleMap[$action] ?? RoleId::Interviewer->value;
 
@@ -148,18 +152,19 @@ if (!$actor) {
 }
 
 // Ensure actor program assignment for interviewer or evaluator
-if (in_array($action, ['interviewer-accept', 'evaluator-pass'], true)) {
+if (in_array($action, ['interviewer-accept', 'interviewer-accept-last-slot', 'evaluator-pass'], true)) {
     DB::table('program_user')->updateOrInsert(
         ['user_id' => $actor->id, 'program_id' => $programId],
         ['role_id' => $actor->role_id]
     );
 }
 
-// Seed N test applicants with unique run timestamp
+// Seed N test applicants with unique run timestamp (2*N for interviewer-accept-last-slot)
 $runTimestamp = time();
 $seededApplicants = [];
+$applicantTotal = ($action === 'interviewer-accept-last-slot') ? ($n * 2) : $n;
 
-for ($i = 1; $i <= $n; $i++) {
+for ($i = 1; $i <= $applicantTotal; $i++) {
     $applicantEmail = "{$prefix}_{$runTimestamp}_{$i}@example.local";
 
     $user = new User();
@@ -194,12 +199,20 @@ for ($i = 1; $i <= $n; $i++) {
     ]);
 
     // Action-specific prerequisites
-    if ($action === 'interviewer-accept') {
+    if (in_array($action, ['interviewer-accept', 'interviewer-accept-last-slot'], true)) {
         Grade::create([
             'user_id'     => (string) $user->id,
             'mathematics' => 95,
             'science'     => 95,
             'english'     => 95,
+        ]);
+
+        ApplicationProcess::create([
+            'application_id' => $application->id,
+            'stage'          => 'grade_evaluator',
+            'status'         => 'completed',
+            'action'         => 'passed',
+            'performed_by'   => null,
         ]);
 
         ApplicationProcess::create([

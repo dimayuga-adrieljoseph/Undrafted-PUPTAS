@@ -14,9 +14,10 @@ To reproduce and verify race conditions locally on Windows, this harness spawns 
 ---
 
 ## Supported Actions
-1. **`interviewer-accept`**: Parallel acceptance by department interviewer (`InterviewerDashboardController::accept`). Tests program quota slot decrements and `medical` stage process creation.
-2. **`registrar-tag`**: Parallel official enrollment tagging by registrar (`RecordStaffDashboardController::tag`). Tests `enrollment_status` transitions and `audit_logs` record deduplication.
-3. **`evaluator-pass`**: Parallel applicant approval by document evaluator (`EvaluatorDashboardController::passApplication`). Tests next-stage (`grade_evaluator`) process row deduplication.
+1. **`interviewer-accept`**: Two PHP processes calling `InterviewerDashboardController::accept` in parallel for the same applicant. Tests program quota slot decrements and `medical` stage process creation.
+2. **`interviewer-accept-last-slot`**: Two PHP processes calling `InterviewerDashboardController::accept` in parallel for two different applicants competing for the last remaining slot (`slots = 1`) in the same program. Verifies `Program::lockForUpdate()` serialization, `slots = 0` floor (no negative slots), 1x status 200 and 1x status 400 (`No available slots in the selected program.`), and single `medical` process creation across the two applicants.
+3. **`registrar-tag`**: Two PHP processes calling `RecordStaffDashboardController::tag` in parallel. Tests `enrollment_status` transitions and `audit_logs` record deduplication.
+4. **`evaluator-pass`**: Two PHP processes calling `EvaluatorDashboardController::passApplication` in parallel. Tests next-stage (`grade_evaluator`) process row deduplication.
 
 ---
 
@@ -43,6 +44,9 @@ To reproduce and verify race conditions locally on Windows, this harness spawns 
 # Interviewer accept (20 applicants, Program 12)
 .\run_parallel_race.ps1 -Action interviewer-accept -N 20
 
+# Interviewer accept last slot (20 rounds, 2 different applicants per round, Program 12 with slots = 1)
+.\run_parallel_race.ps1 -Action interviewer-accept-last-slot -N 20
+
 # Registrar tag (20 applicants)
 .\run_parallel_race.ps1 -Action registrar-tag -N 20
 
@@ -60,6 +64,7 @@ Pass the path to the baseline worktree's `puptas` folder via `-BasePath`:
 To remove test users, profiles, files, applications, and audit entries created by the harness:
 ```powershell
 .\run_parallel_race.ps1 -Action interviewer-accept -Cleanup
+.\run_parallel_race.ps1 -Action interviewer-accept-last-slot -Cleanup
 .\run_parallel_race.ps1 -Action registrar-tag -Cleanup
 .\run_parallel_race.ps1 -Action evaluator-pass -Cleanup
 ```
@@ -67,4 +72,4 @@ To remove test users, profiles, files, applications, and audit entries created b
 ---
 
 ## Injected Concurrency Stress Window Note
-In local testing benchmarks, a temporary `usleep(300000)` (300ms) delay was injected between the pre-transaction status check and `DB::transaction` in both the old baseline code and the fixed code to isolate and widen the check-then-act window under high load. This temporary injection was strictly for testing and never committed to production code. The harness invokes controller actions directly rather than over HTTP, and real-world race frequencies depend on network and database latency.
+In local testing benchmarks, a temporary `usleep(300000)` (300ms) delay was added as a temporary manual edit between the pre-transaction status check and `DB::transaction` in both the old baseline code and the fixed code to isolate and widen the check-then-act window; it is not part of the harness and was never committed to production code. Each round spawns two PHP processes that invoke the controller method directly in PHP (rather than sending two HTTP requests), and real-world race frequencies depend on network and database latency.
