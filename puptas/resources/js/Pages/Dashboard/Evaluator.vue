@@ -260,6 +260,7 @@ const confirmCancelReview = async () => {
         }
         showToast('Review cancelled.', 'info')
         showCancelModal.value = false
+        refreshDashboard()
     } catch (err) {
         const msg = err.response?.data?.message || 'Failed to cancel review.'
         showToast(msg, 'error')
@@ -821,9 +822,12 @@ const chartOptions = {
         <ChangesConfirmationModal
             :show="showCancelModal"
             title="Cancel Review?"
-            message="This will clear the review start time. The application will remain in your queue."
-            confirm-label="Yes, Cancel"
-            cancel-label="Keep Reviewing"
+            subtitle="This will clear the review start time. The application will remain in your queue."
+            confirm-text="Yes, Cancel"
+            cancel-text="Keep Reviewing"
+            confirm-button-class="bg-red-600 hover:bg-red-700 text-white"
+            :hide-table="true"
+            :loading="isCancellingReview"
             @confirm="confirmCancelReview"
             @cancel="showCancelModal = false"
         />
@@ -832,9 +836,12 @@ const chartOptions = {
         <ChangesConfirmationModal
             :show="showPassModal"
             title="Pass Application?"
-            :message="`This will mark the application as passed and forward it to the ${isDocEval ? 'grade evaluation' : 'interview'} stage.`"
-            confirm-label="Yes, Pass"
-            cancel-label="Cancel"
+            :subtitle="`This will mark the application as passed and forward it to the ${isDocEval ? 'grade evaluation' : 'interview'} stage.`"
+            confirm-text="Yes, Pass"
+            cancel-text="Cancel"
+            confirm-button-class="bg-green-600 hover:bg-green-700 text-white"
+            :hide-table="true"
+            :loading="isSubmitting"
             @confirm="submitPass"
             @cancel="showPassModal = false"
         />
@@ -843,9 +850,12 @@ const chartOptions = {
         <ChangesConfirmationModal
             :show="showReturnModal"
             title="Flag Application?"
-            :message="`This will flag the application and notify the ${isDocEval ? 'Guidance Office' : 'Admissions Office'}.`"
-            confirm-label="Yes, Flag"
-            cancel-label="Cancel"
+            :subtitle="`This will flag the application and notify the ${isDocEval ? 'Guidance Office' : 'Admissions Office'}.`"
+            confirm-text="Yes, Flag"
+            cancel-text="Cancel"
+            confirm-button-class="bg-amber-600 hover:bg-amber-700 text-white"
+            :hide-table="true"
+            :loading="isSubmitting"
             @confirm="submitReturn"
             @cancel="showReturnModal = false"
         />

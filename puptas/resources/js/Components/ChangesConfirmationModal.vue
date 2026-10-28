@@ -1,18 +1,38 @@
 <script setup>
-defineProps({
+import { computed } from 'vue';
+
+const props = defineProps({
     show: { type: Boolean, default: false },
     changes: { type: Array, default: () => [] },
     loading: { type: Boolean, default: false },
+    isLoading: { type: Boolean, default: false },
     title: { type: String, default: 'Confirm Changes' },
-    subtitle: { type: String, default: 'Review the following changes before saving' },
-    confirmText: { type: String, default: 'Save Changes' },
-    cancelText: { type: String, default: 'Cancel' },
+    subtitle: { type: String, default: '' },
+    message: { type: String, default: '' },
+    confirmText: { type: String, default: '' },
+    confirmLabel: { type: String, default: '' },
+    cancelText: { type: String, default: '' },
+    cancelLabel: { type: String, default: '' },
     confirmButtonClass: { type: String, default: 'bg-[#9E122C] hover:bg-[#800918] text-white' },
     hideTable: { type: Boolean, default: false },
     disableChangesValidation: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['confirm', 'cancel']);
+
+const computedLoading = computed(() => props.loading || props.isLoading);
+
+const computedSubtitle = computed(() => {
+    return props.subtitle || props.message || 'Review the following changes before saving';
+});
+
+const computedConfirmText = computed(() => {
+    return props.confirmText || props.confirmLabel || 'Save Changes';
+});
+
+const computedCancelText = computed(() => {
+    return props.cancelText || props.cancelLabel || 'Cancel';
+});
 </script>
 
 <template>
@@ -26,8 +46,12 @@ const emit = defineEmits(['confirm', 'cancel']);
                 <!-- Header -->
                 <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
                     <div>
-                        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">{{ title }}</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ subtitle }}</p>
+                        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">
+                            <slot name="title">{{ title }}</slot>
+                        </h2>
+                        <p v-if="computedSubtitle" class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                            <slot name="subtitle">{{ computedSubtitle }}</slot>
+                        </p>
                     </div>
                     <button
                         @click="emit('cancel')"
@@ -95,25 +119,25 @@ const emit = defineEmits(['confirm', 'cancel']);
                     <button
                         type="button"
                         @click="emit('cancel')"
-                        :disabled="loading"
+                        :disabled="computedLoading"
                         class="px-5 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-50 text-sm font-medium"
                     >
-                        {{ cancelText }}
+                        {{ computedCancelText }}
                     </button>
                     <button
                         type="button"
                         @click="emit('confirm')"
-                        :disabled="loading || (!hideTable && !disableChangesValidation && changes.length === 0)"
+                        :disabled="computedLoading || (!hideTable && !disableChangesValidation && changes.length === 0)"
                         :class="[
                             'px-5 py-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium flex items-center gap-2',
                             confirmButtonClass
                         ]"
                     >
-                        <span v-if="loading" class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        <span v-if="computedLoading" class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                         <svg v-else class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
-                        {{ loading ? 'Processing...' : confirmText }}
+                        {{ computedLoading ? 'Processing...' : computedConfirmText }}
                     </button>
                 </div>
             </div>
