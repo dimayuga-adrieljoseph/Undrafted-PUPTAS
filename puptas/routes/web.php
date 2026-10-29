@@ -747,7 +747,6 @@ Route::middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::post('/admin/audit-logs/analyze', [AuditLogController::class, 'analyze'])->name('audit-logs.analyze');
     Route::get('/admin/audit-logs/analytics-history', [AuditLogController::class, 'getHistory'])->name('audit-logs.history');
     Route::delete('/admin/audit-logs/analytics-history/{id}', [AuditLogController::class, 'deleteHistory'])->name('audit-logs.history.delete');
-    Route::get('/admin/audit-logs/{id}', [AuditLogController::class, 'show'])->name('audit-logs.show');
 
     // API Client Management (M2M / Passport)
     Route::get('/admin/api-clients', [\App\Http\Controllers\SuperAdmin\ApiClientController::class, 'index'])->name('api-clients.index');

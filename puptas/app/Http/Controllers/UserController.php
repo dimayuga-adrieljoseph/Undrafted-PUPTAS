@@ -75,6 +75,7 @@ class UserController extends Controller
         event(new Registered($user));
 
         $roleId = $user->role_id;
+        $assignedProgramIds = [];
 
         // Assign to multiple programs for staff
         if (in_array($roleId, [
@@ -88,6 +89,7 @@ class UserController extends Controller
                 $syncData[$prog->id] = ['role_id' => $roleId];
             }
             $user->programs()->sync($syncData);
+            $assignedProgramIds = $user->programs()->pluck('programs.id')->map(fn ($pid) => (int) $pid)->sort()->values()->all();
         }
 
         // For Applicants added manually
@@ -106,12 +108,24 @@ class UserController extends Controller
             }
         }
 
+        $storeDescription = "Created user account for {$user->firstname} {$user->lastname} ({$user->email}) with role ID {$user->role_id}.";
+        $storeOldValues = null;
+        $storeNewValues = ['role_id' => (int) $user->role_id];
+
+        if (!empty($assignedProgramIds)) {
+            $storeDescription .= ' (program_ids: [] -> [' . implode(', ', $assignedProgramIds) . '])';
+            $storeOldValues = ['program_ids' => []];
+            $storeNewValues['program_ids'] = $assignedProgramIds;
+        }
+
         $this->auditLogService->logActivity(
             'CREATE',
             'Users',
-            "Created user account for {$user->firstname} {$user->lastname} ({$user->email}) with role ID {$user->role_id}.",
+            $storeDescription,
             null,
-            'USER_MANAGEMENT'
+            'USER_MANAGEMENT',
+            $storeOldValues,
+            $storeNewValues
         );
 
         return redirect()->route('users.index')->with('status', 'User added successfully!');
@@ -292,13 +306,23 @@ class UserController extends Controller
         ]);
 
         // If Role is 1 (Applicant), we find them in ApplicantProfile. Else StaffProfile.
-        $roleId = $request->role_id;
+        $roleId = (int) $request->role_id;
 
-        return DB::transaction(function () use ($request, $id, $roleId) {
+        if ((int) $userModel->id === (int) $request->user()->id && $roleId !== (int) $userModel->role_id) {
+            return redirect()->route('users.index')->with('error', 'You cannot change your own role.');
+        }
+
+        return DB::transaction(function () use ($request, $id, $roleId, $userModel) {
             
             $user = \App\Models\User::where('idp_user_id', $id)->orWhere('id', $id)->first();
             $applicantProfile = \App\Models\ApplicantProfile::where('user_id', (string) $id)->orWhere('user_id', (string) optional($user)->id)->first();
             
+            $oldRoleId = $user ? (int) $user->role_id : (int) $userModel->role_id;
+            $oldProgramIds = $user
+                ? $user->programs()->pluck('programs.id')->map(fn ($pid) => (int) $pid)->sort()->values()->all()
+                : [];
+            $passwordChanged = $request->filled('password');
+
             if ($user) {
                 $user->update([
                     'firstname' => $request->firstname,
@@ -311,7 +335,7 @@ class UserController extends Controller
                 // role_id is not mass-assignable; set explicitly.
                 $user->assignRole((int) $roleId)->save();
 
-                if ($request->filled('password')) {
+                if ($passwordChanged) {
                     $user->update(['password' => Hash::make($request->password)]);
                 }
             }
@@ -431,12 +455,40 @@ class UserController extends Controller
                 $user->programs()->detach();
             }
 
+            $newRoleId = $user ? (int) $user->role_id : $roleId;
+            $newProgramIds = $user
+                ? $user->programs()->pluck('programs.id')->map(fn ($pid) => (int) $pid)->sort()->values()->all()
+                : [];
+
+            $oldValues = ['role_id' => $oldRoleId];
+            $newValues = ['role_id' => $newRoleId];
+
+            $actionDetails .= " (role_id: {$oldRoleId} -> {$newRoleId})";
+
+            $staffProgramRoles = [
+                RoleId::DocumentEvaluator->value,
+                RoleId::Interviewer->value,
+                RoleId::GradeEvaluator->value,
+            ];
+            if ($oldProgramIds !== $newProgramIds || in_array($newRoleId, $staffProgramRoles, true)) {
+                $oldValues['program_ids'] = $oldProgramIds;
+                $newValues['program_ids'] = $newProgramIds;
+                $actionDetails .= ' (program_ids: [' . implode(', ', $oldProgramIds) . '] -> [' . implode(', ', $newProgramIds) . '])';
+            }
+
+            if ($passwordChanged) {
+                $actionDetails .= ' (password changed)';
+                $newValues['password_changed'] = true;
+            }
+
             $this->auditLogService->logActivity(
                 'UPDATE',
                 'Users',
                 $actionDetails,
                 null,
-                'USER_MANAGEMENT'
+                'USER_MANAGEMENT',
+                $oldValues,
+                $newValues
             );
 
             return redirect()->route('users.index')->with('success', 'User details updated successfully!');
@@ -648,6 +700,19 @@ class UserController extends Controller
             return redirect()->route('users.index')->with('error', 'You do not have permission to delete users.');
         }
 
+        $targetUser = \App\Models\User::withTrashed()
+            ->where('idp_user_id', $id)
+            ->orWhere('id', $id)
+            ->first();
+
+        if (
+            ($targetUser && (int) $targetUser->id === (int) $request->user()->id)
+            || (string) $id === (string) $request->user()->id
+            || (!empty($request->user()->idp_user_id) && (string) $id === (string) $request->user()->idp_user_id)
+        ) {
+            return redirect()->route('users.index')->with('error', 'You cannot delete your own account.');
+        }
+
         $reason = $request->input('reason', 'Administrative disposal hold');
         $this->userService->softDeleteUser($id, $reason, $request->user()->id);
 
@@ -661,6 +726,19 @@ class UserController extends Controller
     {
         if ($request->user()->role_id !== 7) {
             return redirect()->route('users.index')->with('error', 'You do not have permission to deactivate users.');
+        }
+
+        $targetUser = \App\Models\User::withTrashed()
+            ->where('idp_user_id', $id)
+            ->orWhere('id', $id)
+            ->first();
+
+        if (
+            ($targetUser && (int) $targetUser->id === (int) $request->user()->id)
+            || (string) $id === (string) $request->user()->id
+            || (!empty($request->user()->idp_user_id) && (string) $id === (string) $request->user()->idp_user_id)
+        ) {
+            return redirect()->route('users.index')->with('error', 'You cannot deactivate your own account.');
         }
 
         $reason = $request->input('reason', 'Administrative deactivation');

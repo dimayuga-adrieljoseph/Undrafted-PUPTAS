@@ -256,7 +256,9 @@ class InterviewerDashboardController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($application, $grades, $userId, $interviewerInProgress, $programId, $startTime, $customNotes) {
+            $gradeOverrideApplied = false;
+
+            DB::transaction(function () use ($application, $grades, $userId, $interviewerInProgress, $programId, $startTime, $customNotes, &$gradeOverrideApplied) {
                 // Lock application row first (consistent lock order: application → program)
                 $freshApplication = \App\Models\Application::lockForUpdate()->findOrFail($application->id);
 
@@ -284,17 +286,18 @@ class InterviewerDashboardController extends Controller
                 }
 
                 $isSuperAdmin = Auth::user()->role_id === RoleId::SuperAdmin->value;
+                $belowGradeRequirements = (
+                    $grades->mathematics < $program->math ||
+                    $grades->science < $program->science ||
+                    $grades->english < $program->english
+                );
 
-                if (
-                    !$isSuperAdmin && (
-                        $grades->mathematics < $program->math ||
-                        $grades->science < $program->science ||
-                        $grades->english < $program->english
-                    )
-                ) {
+                if (!$isSuperAdmin && $belowGradeRequirements) {
                     Log::warning("User {$userId} does not meet grade requirements for program {$program->id}");
                     abort(400, 'User does not meet the grade requirements for this program.');
                 }
+
+                $gradeOverrideApplied = $isSuperAdmin && $belowGradeRequirements;
 
                 // Update application to the interviewer's assigned program
                 $freshApplication->program_id = $programId;
@@ -332,7 +335,12 @@ class InterviewerDashboardController extends Controller
                 }
             });
 
-            $this->auditLogService->logActivity('UPDATE', 'Applications', "Interviewer accepted application for applicant ID {$userId} into program ID {$programId}.", null, 'ADMISSION_DATA');
+            $auditDescription = "Interviewer accepted application for applicant ID {$userId} into program ID {$programId}.";
+            if ($gradeOverrideApplied) {
+                $auditDescription .= ' (grade requirement override by SuperAdmin)';
+            }
+
+            $this->auditLogService->logActivity('UPDATE', 'Applications', $auditDescription, null, 'ADMISSION_DATA');
 
             return response()->json(['message' => 'Application accepted.']);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
