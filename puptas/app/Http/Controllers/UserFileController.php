@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Application;
 use App\Models\User;
 use App\Models\UserFile;
 use App\Helpers\FileMapper;
@@ -58,6 +59,16 @@ class UserFileController extends Controller
         $user = $request->user();
 
         abort_unless($user, Response::HTTP_UNAUTHORIZED);
+
+        $application = Application::latestForUser()
+            ->where('user_id', (string) $user->id)
+            ->first();
+
+        if ($application && $application->enrollment_status === 'officially_enrolled') {
+            return response()->json([
+                'message' => 'Your enrollment is already finalized. Documents can no longer be changed.',
+            ], Response::HTTP_CONFLICT);
+        }
 
         $filesToSave = [
             'file10Front' => 'file10_front',

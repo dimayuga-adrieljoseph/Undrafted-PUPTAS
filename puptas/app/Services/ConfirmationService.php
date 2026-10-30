@@ -382,6 +382,7 @@ class ConfirmationService
         $existingFile = $this->userFileRepository->firstByUserAndType((string) $user->id, $type);
 
         $existingFilePath = $existingFile?->file_path;
+        $previousOriginalName = $existingFile?->original_name;
 
         // Mark the file as "uploading" in the DB BEFORE the actual storage operation.
         // This makes the backend authoritative — the frontend can poll this status
@@ -464,6 +465,8 @@ class ConfirmationService
         return [
             'message' => 'File reuploaded successfully',
             'file' => FileMapper::buildFilePayload($userFile, true),
+            'previous_original_name' => $previousOriginalName,
+            'new_original_name' => $userFile->original_name,
         ];
     }
 

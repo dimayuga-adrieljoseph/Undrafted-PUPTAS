@@ -11,6 +11,7 @@ use App\Services\AuditLogService;
 use App\Http\Requests\SubmitApplicationRequest;
 use App\Http\Requests\ReuploadFileRequest;
 use App\Helpers\FileMapper;
+use App\Models\Application;
 
 class ConfirmationController extends Controller
 {
@@ -93,6 +94,16 @@ class ConfirmationController extends Controller
         $user = auth()->user();
         $inputName = $request->input('field');
 
+        $application = Application::latestForUser()
+            ->where('user_id', (string) $user->id)
+            ->first();
+
+        if ($application && $application->enrollment_status === 'officially_enrolled') {
+            return response()->json([
+                'message' => 'Your enrollment is already finalized. Documents can no longer be changed.',
+            ], 409);
+        }
+
         try {
             $result = $this->confirmationService->reuploadFile(
                 $user,
@@ -100,7 +111,15 @@ class ConfirmationController extends Controller
                 $request->file('file')
             );
 
-            $this->auditLogService->logActivity('UPDATE', 'Applications', "Applicant {$user->firstname} {$user->lastname} uploaded document '{$inputName}'.", $user, 'ADMISSION_DATA');
+            $this->auditLogService->logActivity(
+                'UPDATE',
+                'Applications',
+                "Applicant {$user->firstname} {$user->lastname} uploaded document '{$inputName}'.",
+                $user,
+                'ADMISSION_DATA',
+                ['original_name' => $result['previous_original_name'] ?? null],
+                ['original_name' => $result['new_original_name'] ?? null]
+            );
 
             return response()->json($result);
         } catch (\InvalidArgumentException $e) {
